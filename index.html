@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Safe Space Assistant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="ambient-bg" aria-hidden="true">
+      <div class="mesh"></div>
+    </div>
+    <button class="sidebar-scrim" id="sidebarScrim" aria-label="Close menu overlay"></button>
+
+    <div class="app-shell" id="app">
+      <aside class="sidebar glass" id="sidebar" aria-hidden="true">
+        <div class="sidebar-head">
+          <p class="sidebar-title">Space Settings</p>
+          <button class="icon-btn" id="closeSidebarBtn" aria-label="Close menu">✕</button>
+        </div>
+        <button class="row-btn glass-soft" id="themeBtn" type="button">Toggle dark mode</button>
+        <div class="hint">
+          Journal history and preferences can connect to your Python notebook session here.
+        </div>
+      </aside>
+
+      <main class="chat-layout">
+        <header class="topbar">
+          <button class="icon-btn glass" id="openSidebarBtn" aria-label="Open menu">☰</button>
+          <div class="status glass-soft">present and listening</div>
+          <button class="icon-btn glass" id="quickThemeBtn" aria-label="Toggle dark mode">◐</button>
+        </header>
+
+        <section class="chat-scroll" id="chatScroll">
+          <div class="empty-state" id="emptyState">
+            <h1>Take a breath. What is on your mind today?</h1>
+            <p>You are in a gentle space. Start wherever feels easiest.</p>
+            <div class="starters" id="starters">
+              <button class="pill" type="button">I feel overwhelmed</button>
+              <button class="pill" type="button">I cannot stop overthinking</button>
+              <button class="pill" type="button">Just need to vent</button>
+            </div>
+          </div>
+
+          <div class="messages" id="messages" aria-live="polite"></div>
+          <div class="typing hidden" id="typingIndicator" aria-label="Assistant is thinking">
+            <span></span><span></span><span></span>
+          </div>
+        </section>
+
+        <form class="composer glass" id="composerForm">
+          <textarea
+            id="composerInput"
+            rows="1"
+            placeholder="Share what you are carrying..."
+            aria-label="Type your message"
+          ></textarea>
+          <button class="send-btn" id="sendBtn" type="submit" aria-label="Send message">→</button>
+        </form>
+      </main>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
