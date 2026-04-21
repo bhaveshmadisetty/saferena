@@ -76,11 +76,45 @@ function closeSidebar() {
   elements.sidebarScrim.classList.remove("show");
 }
 
-function applyTheme(isDark) {
-  document.body.classList.toggle("dark", isDark);
-  elements.themeBtn.textContent = isDark
-    ? "Switch to warm light mode"
-    : "Switch to charcoal dark mode";
+function applyTheme(isDark, event = null) {
+  const toggleTheme = () => {
+    document.body.classList.toggle("dark", isDark);
+    elements.themeBtn.textContent = isDark
+      ? "Switch to warm light mode"
+      : "Switch to charcoal dark mode";
+  };
+
+  if (!document.startViewTransition || !event) {
+    toggleTheme();
+    return;
+  }
+
+  const x = event.clientX;
+  const y = event.clientY;
+
+  const endRadius = Math.hypot(
+    Math.max(x, innerWidth - x),
+    Math.max(y, innerHeight - y)
+  );
+
+  const transition = document.startViewTransition(toggleTheme);
+
+  transition.ready.then(() => {
+    const clipPath = [
+      `circle(0px at ${x}px ${y}px)`,
+      `circle(${endRadius}px at ${x}px ${y}px)`,
+    ];
+    document.documentElement.animate(
+      {
+        clipPath: clipPath,
+      },
+      {
+        duration: 500,
+        easing: "ease-out",
+        pseudoElement: "::view-transition-new(root)",
+      }
+    );
+  });
 }
 
 elements.composerInput.addEventListener("input", () => {
@@ -119,12 +153,12 @@ elements.openSidebarBtn.addEventListener("click", openSidebar);
 elements.closeSidebarBtn.addEventListener("click", closeSidebar);
 elements.sidebarScrim.addEventListener("click", closeSidebar);
 
-elements.themeBtn.addEventListener("click", () => {
-  applyTheme(!document.body.classList.contains("dark"));
+elements.themeBtn.addEventListener("click", (event) => {
+  applyTheme(!document.body.classList.contains("dark"), event);
 });
 
-elements.quickThemeBtn.addEventListener("click", () => {
-  applyTheme(!document.body.classList.contains("dark"));
+elements.quickThemeBtn.addEventListener("click", (event) => {
+  applyTheme(!document.body.classList.contains("dark"), event);
 });
 
 document.addEventListener("keydown", (event) => {

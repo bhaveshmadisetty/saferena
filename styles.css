@@ -405,9 +405,7 @@ textarea::placeholder {
 .sidebar-scrim {
   position: fixed;
   inset: 0;
-  background: rgba(16, 18, 20, 0.08);
-  backdrop-filter: blur(4px);
-  -webkit-backdrop-filter: blur(4px);
+  background: rgba(16, 18, 20, 0.2);
   z-index: 15;
   opacity: 0;
   pointer-events: none;
@@ -467,4 +465,18 @@ textarea::placeholder {
     width: min(320px, calc(100vw - 20px));
     padding: 14px;
   }
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 2;
 }
