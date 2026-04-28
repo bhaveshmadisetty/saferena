@@ -1,6 +1,6 @@
 import json
 
-from rag_pipeline import generate_assistant_reply
+from rag_pipeline_lite import generate_assistant_reply
 
 
 def _response(start_response, status_code, payload):
