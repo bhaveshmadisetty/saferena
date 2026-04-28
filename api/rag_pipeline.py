@@ -155,9 +155,7 @@ Updated summary:
         return response.choices[0].message.content.strip()
     except Exception as e:
         print(f"Error updating summary: {e}")
-        # Log to a file for debugging without console buffering issues
-        with open(LOG_PATH, "a") as f:
-            f.write(f"Summary Error: {str(e)}\n")
+        print(f"Summary Error: {str(e)}")
         return previous_summary
 
 def generate_assistant_reply(
@@ -336,8 +334,6 @@ REPLY:
     except Exception as e:
         error_msg = f"API Error: {str(e)}"
         print(error_msg)
-        with open(LOG_PATH, "a") as f:
-            f.write(f"Chat Error: {str(e)}\n")
         
         # Surface the actual error to the user if it's a known issue
         if "402" in str(e):
