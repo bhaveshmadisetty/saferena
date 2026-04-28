@@ -2,7 +2,6 @@
   "version": 2,
   "routes": [
     { "handle": "filesystem" },
-    { "src": "/api/chat", "dest": "/api/main.py" },
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }

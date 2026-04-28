@@ -1,49 +1,61 @@
+"""
+Vercel Python serverless function for /api/chat endpoint.
+Uses BaseHTTPRequestHandler (the standard Vercel Python format).
+"""
+
+from http.server import BaseHTTPRequestHandler
 import json
-from rag_pipeline_lite import generate_assistant_reply
+import traceback
 
 
-def _json_response(status_code, payload):
-  return {
-    "statusCode": status_code,
-    "headers": {
-      "content-type": "application/json; charset=utf-8",
-      "cache-control": "no-store",
-    },
-    "body": json.dumps(payload),
-  }
+class handler(BaseHTTPRequestHandler):
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.end_headers()
 
+    def do_POST(self):
+        try:
+            # Read request body
+            content_length = int(self.headers.get("Content-Length", 0))
+            raw_body = self.rfile.read(content_length) if content_length > 0 else b""
+            payload = json.loads(raw_body.decode("utf-8")) if raw_body else {}
 
-def handler(request):
-  """
-  Vercel Python serverless endpoint: POST /api/chat
-  Request JSON:
-    {
-      "sessionId": "string",
-      "messages": [{"id": "...", "role": "user|assistant", "content": "..."}]
-    }
-  Response JSON:
-    {"reply": "assistant message"}
-  """
-  if request.method == "OPTIONS":
-    return _json_response(204, {})
+            messages = payload.get("messages", [])
+            session_id = payload.get("sessionId")
 
-  if request.method != "POST":
-    return _json_response(405, {"error": "Method not allowed"})
+            if not isinstance(messages, list):
+                self._json_response(400, {"error": "'messages' must be an array"})
+                return
 
-  try:
-    payload = request.get_json(silent=True) or {}
-    messages = payload.get("messages", [])
-    session_id = payload.get("sessionId")
+            # Lazy import to catch import errors gracefully
+            from rag_pipeline_lite import generate_assistant_reply
 
-    if not isinstance(messages, list):
-      return _json_response(400, {"error": "'messages' must be an array"})
-    if session_id is not None and not isinstance(session_id, str):
-      return _json_response(400, {"error": "'sessionId' must be a string if provided"})
+            reply = generate_assistant_reply(messages, session_id=session_id)
 
-    reply = generate_assistant_reply(messages, session_id=session_id)
-    if not isinstance(reply, str):
-      return _json_response(500, {"error": "Pipeline returned non-string reply"})
+            if not isinstance(reply, str):
+                self._json_response(500, {"error": "Pipeline returned non-string reply"})
+                return
 
-    return _json_response(200, {"reply": reply})
-  except Exception as exc:
-    return _json_response(500, {"error": "Internal server error", "details": str(exc)})
+            self._json_response(200, {"reply": reply})
+
+        except Exception as exc:
+            tb = traceback.format_exc()
+            print(f"FUNCTION ERROR: {exc}\n{tb}")
+            self._json_response(500, {
+                "error": "Internal server error",
+                "details": str(exc),
+                "trace": tb
+            })
+
+    def _json_response(self, status_code, payload):
+        body = json.dumps(payload).encode("utf-8")
+        self.send_response(status_code)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
