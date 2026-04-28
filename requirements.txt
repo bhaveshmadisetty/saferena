@@ -1,1 +1,6 @@
-# Add RAG/model dependencies here when needed.
+sentence-transformers
+faiss-cpu
+numpy
+openai
+Flask
+Flask-Cors

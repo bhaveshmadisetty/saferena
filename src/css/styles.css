@@ -32,6 +32,7 @@ body {
   margin: 0;
   width: 100%;
   height: 100%;
+  overflow: hidden; /* Prevent outer phantom scrollbars */
   font-family: Inter, system-ui, -apple-system, Segoe UI, sans-serif;
   color: var(--fg);
   background: var(--bg);
@@ -41,6 +42,32 @@ body {
   line-height: 1.65;
   letter-spacing: -0.01em;
   text-rendering: optimizeLegibility;
+}
+
+/* Premium Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--muted) 20%, transparent);
+  border-radius: 10px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--muted) 40%, transparent);
+}
+
+/* Firefox Support */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--muted) 30%, transparent) transparent;
 }
 
 .ambient-bg {
@@ -60,13 +87,10 @@ body {
     radial-gradient(circle at 74% 18%, rgba(193, 188, 207, 0.35), transparent 46%),
     radial-gradient(circle at 50% 74%, rgba(227, 211, 191, 0.58), transparent 52%);
   animation: breathe 22s ease-in-out infinite alternate;
-  transition: transform 0.35s ease, opacity 0.35s ease;
+  /* No transition — prevents any snap/flash when body classes change */
 }
 
-body.typing .mesh {
-  transform: scale(1.025);
-  opacity: 0.92;
-}
+/* typing-state ambient effect removed to prevent background brightening */
 
 @keyframes breathe {
   0% {
@@ -83,16 +107,19 @@ body.typing .mesh {
 .app-shell {
   position: relative;
   z-index: 1;
-  width: min(940px, calc(100vw - 32px));
-  margin: 16px auto;
-  min-height: calc(100vh - 32px);
+  width: 100%;
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  gap: 0px; /* Seamless gap */
 }
 
 .chat-layout {
-  height: calc(100vh - 32px);
+  flex: 1;
+  height: 100vh;
   display: grid;
   grid-template-rows: auto 1fr auto;
-  padding: 4px 4px 8px;
+  padding: 8px 4px 12px;
 }
 
 .topbar {
@@ -158,25 +185,46 @@ body.typing .mesh {
 }
 
 .chat-scroll {
-  overflow: auto;
-  padding: 10px 6px 12px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(109, 118, 126, 0.42) transparent;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable; /* Extra protection for the chat area */
+  padding: 10px 6px 20px;
+  /* Removed old scrollbar properties to use global styles */
+  /* Top and Bottom fade mask */
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    black 40px,
+    black calc(100% - 40px),
+    transparent
+  );
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    black 40px,
+    black calc(100% - 40px),
+    transparent
+  );
 }
 
 .messages {
   display: grid;
   gap: 14px;
-  padding-bottom: 8px;
+  padding-bottom: 40px; /* More room at the bottom */
 }
 
 .msg {
-  max-width: 84%;
+  max-width: 88%;
   border-radius: var(--radius-xl);
-  padding: 14px 18px;
-  font-size: 15px;
+  padding: 14px 20px;
+  font-size: 16px;
   line-height: 1.72;
   animation: rise 300ms var(--ease-soft);
+}
+@media (min-width: 1024px) {
+  .msg {
+    max-width: 72%; /* More elegant on large screens */
+  }
 }
 
 .msg.user {
@@ -256,6 +304,8 @@ body.dark .msg.user {
   align-items: flex-end;
   gap: 10px;
   box-shadow: var(--shadow-lg), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  /* Contain height changes so the grid layout never collapses on resize */
+  contain: layout;
 }
 
 textarea {
@@ -372,6 +422,30 @@ textarea::placeholder {
 
 .sidebar.open {
   transform: translateX(0);
+}
+
+@media (min-width: 1024px) {
+  .app-shell {
+    padding: 0;
+  }
+  .sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    transform: translateX(0);
+    z-index: 5;
+    box-shadow: none;
+    border-right: 1px solid var(--stroke);
+    border-radius: 0;
+  }
+  .chat-layout {
+    padding: 10px 40px 14px;
+  }
+  #sidebarScrim,
+  #openSidebarBtn,
+  #closeSidebarBtn {
+    display: none !important;
+  }
 }
 
 .sidebar-head {

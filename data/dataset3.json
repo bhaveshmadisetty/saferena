@@ -1,0 +1,155 @@
+[
+  {
+    "topic": "breakup_decision_phase",
+    "tags": ["considering breakup", "doubt", "fear of loneliness", "comfort"],
+    "emotions": ["uncertainty", "fear", "guilt", "paralysis"],
+    "user_signals": [
+      "Should I leave?",
+      "I don't love them anymore but I can't leave",
+      "I'm scared to be alone",
+      "It's just comfortable",
+      "I know I should break up but I can't"
+    ],
+    "severity": "medium",
+
+    "drk_stream": [
+      "I actually believe you here…",
+      "and it’s like your mind is stuck between what you know and what feels safe…",
+      "your brain really hates giving up comfort, even when it knows something isn’t right…"
+    ],
+
+    "drk_analysis_modes": {
+      "neuro": "Your brain is wired to avoid uncertainty, so it clings to familiar patterns even if they hurt.",
+      "psych": "This often comes from a need for emotional safety and fear of losing stability.",
+      "philosophy": "Sometimes the suffering isn’t just the situation—it’s the meaning your mind attaches to it."
+    },
+
+    "deep_questions": [
+      "When you think about leaving, is it the loneliness that scares you—or losing that sense of stability?",
+      "Do you feel stuck because you still love them, or because change feels overwhelming?",
+      "If the fear disappeared for a moment, do you think you’d already know your answer?"
+    ]
+  },
+
+  {
+    "topic": "breakup_execution_guilt",
+    "tags": ["breakup", "guilt", "hurting someone", "communication"],
+    "emotions": ["guilt", "anxiety", "dread", "sorrow"],
+    "user_signals": [
+      "I feel guilty breaking up",
+      "I don't want to hurt them",
+      "How do I end it gently?",
+      "They said I'm giving up"
+    ],
+    "severity": "medium",
+
+    "drk_stream": [
+      "I can see why this feels heavy…",
+      "it’s like you’re carrying both your pain and theirs at the same time…",
+      "and your mind is trying to protect them, even at your own expense…"
+    ],
+
+    "drk_analysis_modes": {
+      "neuro": "Your brain is wired for empathy, so it reacts strongly to the idea of causing someone pain.",
+      "psych": "This guilt often comes from feeling responsible for other people's emotions.",
+      "philosophy": "There’s a difference between causing pain and being responsible for it."
+    },
+
+    "deep_questions": [
+      "Do you feel like you're responsible for how they feel after the breakup?",
+      "Is the guilt coming from hurting them—or from how you see yourself because of it?",
+      "If roles were reversed, would you expect them to stay just to protect your feelings?"
+    ]
+  },
+
+  {
+    "topic": "post_breakup_boundaries",
+    "tags": ["no contact", "boundaries", "attachment", "moving on"],
+    "emotions": ["longing", "confusion", "guilt"],
+    "user_signals": [
+      "I want to text them",
+      "Can we still be friends?",
+      "I miss them",
+      "Should I check on them?"
+    ],
+    "severity": "medium",
+
+    "drk_stream": [
+      "That silence after a breakup can feel really intense…",
+      "and your brain keeps pulling you back toward what feels familiar…",
+      "it’s almost like it’s trying to undo the loss…"
+    ],
+
+    "drk_analysis_modes": {
+      "neuro": "Your brain treats emotional attachment like a reward system, so it craves reconnection.",
+      "psych": "This urge often comes from attachment patterns and difficulty letting go.",
+      "philosophy": "Letting go isn’t about forgetting—it’s about loosening the grip your mind has on the past."
+    },
+
+    "deep_questions": [
+      "When you want to reach out, is it about them—or about easing your own discomfort?",
+      "Do you think staying in contact would actually help you heal—or delay it?",
+      "What do you feel right before the urge to text shows up?"
+    ]
+  },
+
+  {
+    "topic": "toxic_relationship_confusion",
+    "tags": ["toxic", "manipulation", "self-doubt"],
+    "emotions": ["confusion", "exhaustion", "anxiety"],
+    "user_signals": [
+      "Am I the problem?",
+      "Why is it always my fault?",
+      "I feel confused in my relationship"
+    ],
+    "severity": "high",
+
+    "drk_stream": [
+      "That sounds really exhausting…",
+      "it’s like your mind is constantly trying to make sense of something unstable…",
+      "and over time, that confusion starts to turn inward…"
+    ],
+
+    "drk_analysis_modes": {
+      "neuro": "Unpredictable behavior creates stress responses that keep your brain on edge.",
+      "psych": "This pattern often involves emotional manipulation and shifting responsibility.",
+      "philosophy": "Confusion is sometimes not a lack of clarity—but a result of distorted input."
+    },
+
+    "deep_questions": [
+      "Do you notice patterns where things improve briefly, then fall apart again?",
+      "When things go wrong, do you automatically assume it’s your fault?",
+      "Do you feel like you’re constantly adjusting yourself to keep the peace?"
+    ]
+  },
+
+  {
+    "topic": "general_emotional_support",
+    "tags": ["general", "confusion", "emotional support"],
+    "emotions": ["uncertainty", "distress"],
+    "user_signals": [
+      "I feel bad",
+      "I don't know what's wrong",
+      "I feel lost"
+    ],
+    "severity": "low",
+
+    "drk_stream": [
+      "I’m really glad you said that out loud…",
+      "sometimes our mind just starts doing a lot with very little…",
+      "and it leaves us feeling lost without knowing why…"
+    ],
+
+    "drk_analysis_modes": {
+      "neuro": "Your brain is trying to process something unresolved, which creates that unclear heaviness.",
+      "psych": "This often comes from unmet emotional needs that aren’t fully conscious yet.",
+      "philosophy": "Not knowing is part of awareness—clarity often comes after sitting with confusion."
+    },
+
+    "deep_questions": [
+      "Do you feel like this came from something recent—or something deeper?",
+      "If you sit with the feeling, what does it seem to be pointing toward?",
+      "Does this feel like a new emotion, or something familiar?"
+    ]
+  }
+]

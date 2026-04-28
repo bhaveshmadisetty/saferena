@@ -34,14 +34,28 @@ function escapeHtml(text) {
 
 function autoResize() {
   const t = elements.composerInput;
-  t.style.height = "auto";
-  t.style.height = `${Math.min(t.scrollHeight, 180)}px`;
+  // Read natural content height without modifying the DOM at all:
+  // We compare line height to scrollHeight to decide if we need to grow.
+  const lineH = parseFloat(getComputedStyle(t).lineHeight) || 24;
+  const pad = parseFloat(getComputedStyle(t).paddingTop) + parseFloat(getComputedStyle(t).paddingBottom);
+  const singleLineH = Math.round(lineH + pad);
+
+  // Only touch the height if the content is actually taller than one line.
+  // This prevents any layout reflow while typing on a single line.
+  if (t.scrollHeight > singleLineH + 4) {
+    t.style.height = "1px";
+    t.style.height = `${Math.min(t.scrollHeight, 180)}px`;
+  } else {
+    t.style.height = singleLineH + "px";
+  }
 }
 
 function scrollToBottom() {
-  elements.chatScroll.scrollTo({
-    top: elements.chatScroll.scrollHeight,
-    behavior: "smooth",
+  requestAnimationFrame(() => {
+    elements.chatScroll.scrollTo({
+      top: elements.chatScroll.scrollHeight,
+      behavior: latest.messages.length <= 1 ? "auto" : "smooth",
+    });
   });
 }
 
@@ -120,7 +134,7 @@ function applyTheme(isDark, event = null) {
 elements.composerInput.addEventListener("input", () => {
   autoResize();
   elements.sendBtn.disabled = !elements.composerInput.value.trim() || latest.isLoading;
-  document.body.classList.toggle("typing", Boolean(elements.composerInput.value.trim()));
+  // body.typing class removed — it was causing background and layout glitches
 });
 
 elements.composerInput.addEventListener("keydown", (event) => {
@@ -135,7 +149,6 @@ elements.composerForm.addEventListener("submit", async (event) => {
   const text = elements.composerInput.value;
   elements.composerInput.value = "";
   autoResize();
-  document.body.classList.remove("typing");
   await store.send(text, sendMessageToBackend);
 });
 
@@ -146,7 +159,6 @@ elements.starters.addEventListener("click", (event) => {
   autoResize();
   elements.composerInput.focus();
   elements.sendBtn.disabled = false;
-  document.body.classList.add("typing");
 });
 
 elements.openSidebarBtn.addEventListener("click", openSidebar);
