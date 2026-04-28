@@ -3,6 +3,12 @@ Vercel Python serverless function for /api/chat endpoint.
 Uses BaseHTTPRequestHandler (the standard Vercel Python format).
 """
 
+import sys
+import os
+
+# Ensure the api/ directory is on the path so rag_pipeline_lite can be imported
+sys.path.insert(0, os.path.dirname(__file__))
+
 from http.server import BaseHTTPRequestHandler
 import json
 import traceback
