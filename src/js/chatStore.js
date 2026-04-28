@@ -38,11 +38,11 @@ export function createChatStore() {
     try {
       const assistant = await sendMessageToBackend(state.messages, state.sessionId);
       state.messages.push({ id: createId(), role: "assistant", content: assistant });
-    } catch (_err) {
+    } catch (err) {
       state.messages.push({
         id: createId(),
         role: "assistant",
-        content: "I am here with you. Something went wrong technically, but you can try again.",
+        content: `I am here with you. (Error: ${err.message || "Something went wrong technically"}). Please try again.`,
       });
     } finally {
       state.isLoading = false;

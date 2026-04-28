@@ -30,7 +30,8 @@ export async function sendMessageToBackend(messages, sessionId) {
     });
 
     if (!response.ok) {
-      throw new Error(`Backend error: ${response.status}`);
+      const errorBody = await response.text().catch(() => "");
+      throw new Error(`Backend error: ${response.status} - ${errorBody}`);
     }
 
     const data = await response.json();
