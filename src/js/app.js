@@ -177,5 +177,5 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") closeSidebar();
 });
 
-applyTheme(false);
+applyTheme(true);
 autoResize();
