@@ -226,6 +226,7 @@ Updated summary:
 def generate_assistant_reply(
     messages: list[dict[str, Any]],
     session_id: str | None = None,
+    memory_context: str = "",  # Supabase persistent memory (optional add-on)
 ) -> str:
     if not messages:
         return "I am here with you."
@@ -371,6 +372,11 @@ USER STATE (IMPORTANT):
 
 RECENT CHAT:
 {history_text}
+
+---
+
+PERSISTENT MEMORY (from previous sessions, use naturally if relevant):
+{memory_context}
 
 ---
 

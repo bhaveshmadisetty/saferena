@@ -1,39 +1,3 @@
-// ---------------------------------------------------------------------------
-// Guest ID cookie management (7-day persistent anonymous identity)
-// ---------------------------------------------------------------------------
-function getOrCreateGuestId() {
-  const COOKIE_NAME = "guest_id";
-  const EXPIRY_DAYS = 7;
-
-  // Try to read existing cookie
-  const match = document.cookie
-    .split("; ")
-    .find((row) => row.startsWith(`${COOKIE_NAME}=`));
-  if (match) {
-    return match.split("=")[1];
-  }
-
-  // Generate new UUID
-  let id;
-  if (
-    typeof globalThis !== "undefined" &&
-    globalThis.crypto &&
-    typeof globalThis.crypto.randomUUID === "function"
-  ) {
-    id = globalThis.crypto.randomUUID();
-  } else {
-    id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-  }
-
-  // Set cookie with 7-day expiry
-  const expires = new Date(Date.now() + EXPIRY_DAYS * 864e5).toUTCString();
-  document.cookie = `${COOKIE_NAME}=${id}; expires=${expires}; path=/; SameSite=Lax`;
-  return id;
-}
-
-// ---------------------------------------------------------------------------
-// Mock fallback (original, unchanged)
-// ---------------------------------------------------------------------------
 function getMockResponse(lastUserMessage) {
   const text = (lastUserMessage || "").toLowerCase();
 
@@ -52,17 +16,11 @@ function getMockResponse(lastUserMessage) {
   return "Thank you for trusting me with that. I am here with you. If you want, we can unpack what feels heaviest first.";
 }
 
-// ---------------------------------------------------------------------------
-// Backend communication (original flow preserved, guestId added to payload)
-// ---------------------------------------------------------------------------
 export async function sendMessageToBackend(messages, sessionId) {
   const configuredEndpoint = window.SAFE_SPACE_API_ENDPOINT;
   const isHttp = window.location.protocol === "http:" || window.location.protocol === "https:";
   const endpoint = configuredEndpoint || (isHttp ? "/api/chat" : "");
-
-  // Include guestId for Supabase memory (new field, backend handles gracefully)
-  const guestId = getOrCreateGuestId();
-  const payload = { sessionId, messages, guestId };
+  const payload = { sessionId, messages };
 
   if (endpoint) {
     const response = await fetch(endpoint, {

@@ -1,18 +1,25 @@
+"""
+Lightweight RAG pipeline for Vercel deployment.
+
+Uses scikit-learn TF-IDF instead of sentence-transformers + FAISS.
+This avoids the heavy torch dependency that exceeds Vercel's memory limits.
+
+The heavy pipeline (rag_pipeline.py) is kept intact for local development.
+"""
+
 import json
 import os
-import faiss
-import numpy as np
+import math
+import re
 from typing import Any
-from sentence_transformers import SentenceTransformer
 from openai import OpenAI
 
 # ---------------------------------------------------------------------
 # GLOBAL INITIALIZATION (Runs once when the module loads)
 # ---------------------------------------------------------------------
 DATASET_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "dataset3.json")
-LOG_PATH = os.path.join(os.path.dirname(__file__), "..", "logs", "api_error.log")
 
-print("Loading dataset...")
+print("[lite] Loading dataset...")
 with open(DATASET_PATH, "r", encoding="utf-8") as f:
     dataset = json.load(f)
 
@@ -50,16 +57,64 @@ for item in dataset:
             "intent": "exploration"
         })
 
-print("Loading SentenceTransformer model (BAAI/bge-small-en-v1.5)...")
-model = SentenceTransformer('BAAI/bge-small-en-v1.5')
+# Also index user_signals and tags for better keyword matching
+topic_keywords = {}
+for item in dataset:
+    topic = item["topic"]
+    signals = item.get("user_signals", [])
+    tags = item.get("tags", [])
+    emotions = item.get("emotions", [])
+    topic_keywords[topic] = " ".join(signals + tags + emotions).lower()
 
-print("Encoding vectors and initializing FAISS index...")
-embeddings = model.encode(texts, convert_to_numpy=True)
-faiss.normalize_L2(embeddings)
-dimension = embeddings.shape[1]
-index = faiss.IndexFlatIP(dimension)
-index.add(embeddings)
-print(f"Index ready with {index.ntotal} vectors.")
+# ---------------------------------------------------------------------
+# LIGHTWEIGHT TF-IDF RETRIEVAL (pure Python, no torch/sklearn needed)
+# ---------------------------------------------------------------------
+
+def _tokenize(text):
+    """Simple whitespace + punctuation tokenizer."""
+    return re.findall(r"[a-z']+", text.lower())
+
+# Build vocabulary and document frequency
+_all_docs = texts + list(topic_keywords.values())
+_vocab_df = {}
+_doc_count = len(_all_docs)
+
+for doc in _all_docs:
+    seen = set()
+    for token in _tokenize(doc):
+        if token not in seen:
+            _vocab_df[token] = _vocab_df.get(token, 0) + 1
+            seen.add(token)
+
+def _tfidf_vec(text):
+    """Compute a simple TF-IDF vector for text."""
+    tokens = _tokenize(text)
+    tf = {}
+    for t in tokens:
+        tf[t] = tf.get(t, 0) + 1
+    total = len(tokens) or 1
+    vec = {}
+    for t, count in tf.items():
+        idf = math.log((_doc_count + 1) / (_vocab_df.get(t, 0) + 1)) + 1
+        vec[t] = (count / total) * idf
+    return vec
+
+def _cosine_sim(v1, v2):
+    """Cosine similarity between two sparse vectors (dicts)."""
+    common = set(v1.keys()) & set(v2.keys())
+    if not common:
+        return 0.0
+    dot = sum(v1[k] * v2[k] for k in common)
+    mag1 = math.sqrt(sum(v ** 2 for v in v1.values()))
+    mag2 = math.sqrt(sum(v ** 2 for v in v2.values()))
+    if mag1 == 0 or mag2 == 0:
+        return 0.0
+    return dot / (mag1 * mag2)
+
+# Pre-compute TF-IDF vectors for all texts
+_text_vectors = [_tfidf_vec(t) for t in texts]
+
+print(f"[lite] Index ready with {len(texts)} entries (TF-IDF).")
 
 # ---------------------------------------------------------------------
 # INITIALIZE LLM CLIENT
@@ -77,22 +132,33 @@ session_summaries = {}
 # PIPELINE FUNCTIONS
 # ---------------------------------------------------------------------
 
-def retrieve(query: str, k: int = 5, threshold: float = 0.65) -> list[dict]:
-    query_embedding = model.encode([query], convert_to_numpy=True)
-    faiss.normalize_L2(query_embedding)
+def retrieve(query: str, k: int = 5, threshold: float = 0.05) -> list[dict]:
+    """Retrieve top-k matching texts using TF-IDF cosine similarity."""
+    query_vec = _tfidf_vec(query)
+    scored = []
+    for i, tv in enumerate(_text_vectors):
+        score = _cosine_sim(query_vec, tv)
+        if score > threshold:
+            scored.append((score, i))
 
-    distances, indices = index.search(query_embedding, k)
+    # Also check topic keyword matches for better recall
+    for topic, kw_text in topic_keywords.items():
+        kw_vec = _tfidf_vec(kw_text)
+        kw_score = _cosine_sim(query_vec, kw_vec)
+        if kw_score > threshold:
+            # Boost all entries from this topic
+            for i, m in enumerate(metadata):
+                if m["topic"] == topic and not any(s[1] == i for s in scored):
+                    scored.append((kw_score * 0.8, i))
+
+    scored.sort(key=lambda x: x[0], reverse=True)
     results = []
-
-    for i, idx in enumerate(indices[0]):
-        score = distances[0][i]
-        if idx != -1 and score > threshold:
-            results.append({
-                "text": texts[idx],
-                "meta": metadata[idx],
-                "score": float(score)
-            })
-
+    for score, idx in scored[:k]:
+        results.append({
+            "text": texts[idx],
+            "meta": metadata[idx],
+            "score": score
+        })
     return results
 
 def build_context(results: list[dict]) -> str:
@@ -154,14 +220,12 @@ Updated summary:
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
-        print(f"Error updating summary: {e}")
-        print(f"Summary Error: {str(e)}")
+        print(f"[lite] Error updating summary: {e}")
         return previous_summary
 
 def generate_assistant_reply(
     messages: list[dict[str, Any]],
     session_id: str | None = None,
-    memory_context: str = "",  # Supabase persistent memory (optional add-on)
 ) -> str:
     if not messages:
         return "I am here with you."
@@ -247,14 +311,14 @@ LANGUAGE
 - Keep it simple, real, and grounded
 - Avoid poetic or dramatic metaphors unless it feels very natural
 - Avoid sounding like a therapist or textbook
-- Avoid repeating the same phrases (like “that’s normal”, “it’s okay”)
+- Avoid repeating the same phrases (like "that's normal", "it's okay")
 
 ---
 
 DEPTH CONTROL
 
-- Don’t overanalyze small inputs
-- Don’t force meaning where there isn’t any
+- Don't overanalyze small inputs
+- Don't force meaning where there isn't any
 - Let depth emerge naturally
 
 ---
@@ -265,18 +329,18 @@ If the user asks about past conversation:
 - ONLY use the conversation history provided
 - DO NOT guess or reconstruct
 - DO NOT add details that are not explicitly said
-- If unsure, say you don’t remember clearly
+- If unsure, say you don't remember clearly
 
 Never fabricate memory.
 
 SAFETY (IMPORTANT)
 
-If the user expresses feeling overwhelmed or like they don’t want to live:
+If the user expresses feeling overwhelmed or like they don't want to live:
 
 - respond with care and concern
-- acknowledge the weight of what they’re feeling
+- acknowledge the weight of what they're feeling
 - gently encourage reaching out to someone they trust
-- don’t leave them alone in it
+- don't leave them alone in it
 
 ---
 
@@ -287,7 +351,7 @@ RESPONSE QUALITY RULES:
 - Do not always ask questions
 - Keep responses concise when possible
 - If user repeats, change approach (shorter, quieter, or different angle)
-- Avoid repeating phrases like “yeah, that’s hard” every time
+- Avoid repeating phrases like "yeah, that's hard" every time
 
 ---
 REPETITION AWARENESS:
@@ -307,11 +371,6 @@ USER STATE (IMPORTANT):
 
 RECENT CHAT:
 {history_text}
-
----
-
-PERSISTENT MEMORY (from previous sessions, use naturally if relevant):
-{memory_context}
 
 ---
 

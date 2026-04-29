@@ -3,28 +3,11 @@ import json
 from flask import Flask, request, jsonify, send_from_directory, make_response
 from flask_cors import CORS
 import sys
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
 
 # Ensure api folder is in path so we can import rag_pipeline
 sys.path.append(os.path.join(os.path.dirname(__file__), 'api'))
 
 from rag_pipeline import generate_assistant_reply
-
-# Try to import memory module (optional — works without it)
-try:
-    import supabase_memory as mem
-    _memory_available = mem.is_enabled()
-    if _memory_available:
-        print("[memory] Supabase memory is ENABLED")
-    else:
-        print("[memory] Supabase memory module loaded but NOT configured (missing env vars)")
-except ImportError:
-    mem = None
-    _memory_available = False
-    print("[memory] Supabase memory module not found — running without persistent memory")
 
 app = Flask(__name__, static_folder=".", static_url_path="")
 CORS(app)
@@ -53,51 +36,16 @@ def chat():
     payload = request.get_json(silent=True) or {}
     messages = payload.get("messages", [])
     session_id = payload.get("sessionId")
-    guest_id = payload.get("guestId", "")  # NEW: read guest_id from payload
 
     if not isinstance(messages, list):
         return jsonify({"error": "'messages' must be an array"}), 400
     if session_id is not None and not isinstance(session_id, str):
         return jsonify({"error": "'sessionId' must be a string if provided"}), 400
 
-    # ---- MEMORY: Save user message & load history ----
-    memory_context = ""
-    if guest_id and _memory_available:
-        try:
-            # Extract the last user message
-            last_user_msg = ""
-            for m in reversed(messages):
-                if m.get("role") == "user":
-                    last_user_msg = m.get("content", "")
-                    break
-            # Save user message
-            if last_user_msg:
-                mem.save_message(guest_id, "user", last_user_msg)
-            # Load recent history for this guest
-            recent = mem.load_recent_messages(guest_id, limit=10)
-            memory_context = mem.format_memory_context(recent)
-        except Exception as mem_err:
-            print(f"[memory] Non-fatal error: {mem_err}")
-            memory_context = ""
-    # ---- END MEMORY ----
-
     try:
-        reply = generate_assistant_reply(
-            messages,
-            session_id=session_id,
-            memory_context=memory_context,  # NEW: pass memory context
-        )
+        reply = generate_assistant_reply(messages, session_id=session_id)
         if not isinstance(reply, str):
             return jsonify({"error": "Pipeline returned non-string reply"}), 500
-
-        # ---- MEMORY: Save assistant reply ----
-        if guest_id and _memory_available and reply:
-            try:
-                mem.save_message(guest_id, "assistant", reply)
-            except Exception as mem_err:
-                print(f"[memory] Non-fatal save error: {mem_err}")
-        # ---- END MEMORY ----
-
         return jsonify({"reply": reply}), 200
     except Exception as exc:
         print(f"Server error: {exc}")
