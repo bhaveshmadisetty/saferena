@@ -408,18 +408,31 @@
   }
 
   // ─── check if user already has context ─────
-  // If they do, skip onboarding entirely
+  // If they do, skip onboarding entirely.
+  // Priority: localStorage (instant) → API (network, sets localStorage on success)
   async function init() {
+    const guestId = getGuestId();
+    const storageKey = 'ob_done_' + guestId;
+
+    // 1. Instant local check — no network needed
+    if (localStorage.getItem(storageKey) === '1') {
+      hideOverlay();
+      return;
+    }
+
+    // 2. Network check — for users who cleared localStorage but have Supabase context
     try {
-      const res = await fetch('/api/status/' + getGuestId());
+      const res = await fetch('/api/status/' + guestId);
       const data = await res.json();
       if (data.has_context) {
-        hideOverlay(); // returning user — skip to chat
+        localStorage.setItem(storageKey, '1'); // cache for next reload
+        hideOverlay();
         return;
       }
     } catch(e) {
       // if API fails, still show onboarding
     }
+
     // Show onboarding
     document.getElementById('ob-overlay').style.display = 'flex';
   }
@@ -589,6 +602,9 @@
   window.beginSession = async function() {
     const guestId = getGuestId();
     const path = currentPath;
+
+    // ★ Mark onboarding as done LOCALLY so refreshes skip it instantly
+    localStorage.setItem('ob_done_' + guestId, '1');
 
     // Build payload for /api/intake
     let payload;
