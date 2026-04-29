@@ -50,5 +50,10 @@ export function createChatStore() {
     }
   }
 
-  return { subscribe, send };
+  function addMessage(role, content) {
+    state.messages.push({ id: createId(), role, content });
+    emit();
+  }
+
+  return { subscribe, send, addMessage, state };
 }

@@ -45,6 +45,52 @@ def index():
 def static_files(path):
     return no_cache_response(".", path)
 
+@app.route("/api/intake", methods=["POST", "OPTIONS"])
+def api_intake():
+    if request.method == "OPTIONS": return "", 204
+    payload = request.get_json(silent=True) or {}
+    guest_id = payload.get("guest_id")
+    import api.user_context as uc
+    uc.save_intake_v2(guest_id, payload)
+    return jsonify({"success": True})
+
+@app.route("/api/status/<guest_id>", methods=["GET", "OPTIONS"])
+def api_status(guest_id):
+    if request.method == "OPTIONS": return "", 204
+    import api.user_context as uc
+    ctx = uc.get_context(guest_id)
+    if not ctx: return jsonify({"has_context": False})
+    
+    if ctx.get("is_locked") and ctx.get("unlock_at"):
+        from datetime import datetime, timezone
+        unlock_at = datetime.fromisoformat(ctx["unlock_at"].replace("Z", "+00:00"))
+        if datetime.now(timezone.utc) > unlock_at:
+            if uc.is_enabled():
+                try:
+                    uc._get_client().patch(
+                        f"{uc._REST_URL}/user_context",
+                        headers=uc._HEADERS,
+                        params={"guest_id": f"eq.{guest_id}"},
+                        json={"is_locked": False, "unlock_at": None, "session_msg_count": 0}
+                    )
+                except Exception: pass
+            return jsonify({"has_context": True, "rate_limit": {"allowed": True, "remaining": 15}})
+    
+    if ctx.get("is_locked"):
+        return jsonify({"has_context": True, "rate_limit": {"allowed": False, "remaining": 0, "unlock_at": ctx.get("unlock_at")}})
+        
+    msg_count = ctx.get("session_msg_count", 0)
+    return jsonify({"has_context": True, "rate_limit": {"allowed": True, "remaining": max(0, 15 - msg_count)}})
+
+@app.route("/api/opening/<guest_id>", methods=["GET", "OPTIONS"])
+def api_opening(guest_id):
+    if request.method == "OPTIONS": return "", 204
+    import api.user_context as uc
+    ctx = uc.get_context(guest_id)
+    if not ctx: return jsonify({"message": "Hey — what's on your mind today?"})
+    msg = uc.get_opening_message(ctx)
+    return jsonify({"message": msg, "path": ctx.get("path", "deep")})
+
 @app.route("/api/chat", methods=["POST", "OPTIONS"])
 def chat():
     if request.method == "OPTIONS":
@@ -86,6 +132,7 @@ def chat():
             messages,
             session_id=session_id,
             memory_context=memory_context,  # NEW: pass memory context
+            guest_id=guest_id,              # NEW: pass guest_id for context mapping
         )
         if not isinstance(reply, str):
             return jsonify({"error": "Pipeline returned non-string reply"}), 500

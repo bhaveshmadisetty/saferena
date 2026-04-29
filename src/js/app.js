@@ -1,5 +1,20 @@
 import { createChatStore } from "./chatStore.js";
-import { sendMessageToBackend } from "./api.js";
+import { sendMessageToBackend, getOrCreateGuestId } from "./api.js";
+
+window.addEventListener('ob:complete', async (e) => {
+  const guestId = getOrCreateGuestId();
+  try {
+    const res = await fetch('/api/opening/' + guestId);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.message) {
+        store.addMessage('assistant', data.message);
+      }
+    }
+  } catch (err) {
+    console.error("Failed to fetch opening message:", err);
+  }
+});
 
 const store = createChatStore();
 

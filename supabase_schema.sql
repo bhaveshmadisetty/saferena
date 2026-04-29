@@ -29,3 +29,28 @@ ALTER TABLE chat_messages ENABLE ROW LEVEL SECURITY;
 --   '0 3 * * *',
 --   $$DELETE FROM chat_messages WHERE created_at < NOW() - INTERVAL '7 days'$$
 -- );
+
+-- =============================================================
+-- Onboarding & User Context Schema
+-- =============================================================
+
+CREATE TABLE IF NOT EXISTS user_context (
+  guest_id             TEXT PRIMARY KEY,
+  path                 TEXT DEFAULT 'deep',
+  q1_situation         TEXT,
+  q2_duration          TEXT,
+  q3_root_cause        TEXT,
+  q4_daily_impact      TEXT[],
+  q5_support_need      TEXT,
+  first_name           TEXT,
+  session_msg_count    INT DEFAULT 0,
+  is_locked            BOOLEAN DEFAULT FALSE,
+  unlock_at            TIMESTAMPTZ,
+  future_note          TEXT,
+  future_note_created  TIMESTAMPTZ,
+  created_at           TIMESTAMPTZ DEFAULT NOW(),
+  updated_at           TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE user_context ENABLE ROW LEVEL SECURITY;
+GRANT ALL ON user_context TO service_role;

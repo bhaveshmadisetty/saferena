@@ -74,6 +74,7 @@ class handler(BaseHTTPRequestHandler):
                 messages,
                 session_id=session_id,
                 memory_context=memory_context,  # NEW: pass memory context
+                guest_id=guest_id,              # NEW: pass guest_id for context mapping
             )
 
             if not isinstance(reply, str):

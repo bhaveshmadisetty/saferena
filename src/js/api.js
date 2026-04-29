@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // Guest ID cookie management (7-day persistent anonymous identity)
 // ---------------------------------------------------------------------------
-function getOrCreateGuestId() {
+export function getOrCreateGuestId() {
   const COOKIE_NAME = "guest_id";
   const EXPIRY_DAYS = 7;
 
