@@ -43,6 +43,7 @@ def save_intake_v2(guest_id: str, data: dict):
         "q3_root_cause":   data.get("q3", ""),
         "q4_daily_impact": "{" + ",".join(data.get("q4", [])) + "}",  # Postgres array format
         "q5_support_need": data.get("q5", ""),
+        "first_name":      data.get("first_name", ""),
         "session_msg_count": 0,
         "is_locked": False,
         "updated_at": datetime.now(timezone.utc).isoformat()

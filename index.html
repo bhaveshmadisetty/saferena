@@ -94,7 +94,15 @@
       <div class="ob-heading" style="font-size:clamp(1.4rem,4vw,2rem);margin-bottom:0.5rem">
         What brings you here today?
       </div>
-      <p class="ob-sub">This helps me show up the right way for you. Pick whichever feels closer.</p>
+      <p class="ob-sub">This helps me show up the right way for you.</p>
+
+      <!-- Name input -->
+      <div class="ob-name-wrap">
+        <label class="ob-name-label" for="ob-name">What should I call you?</label>
+        <input type="text" id="ob-name" class="ob-name-input" placeholder="Your first name (optional)" maxlength="40" autocomplete="given-name" />
+      </div>
+
+      <p class="ob-sub" style="margin-top:1.25rem;margin-bottom:0.75rem">Pick whichever feels closer.</p>
 
       <div class="ob-path-grid">
         <button class="ob-path-card" onclick="choosePath('deep')">
@@ -598,13 +606,47 @@
     goTo('ob-summary', null, null);
   };
 
+  // ─── opening message generator (client-side, mirrors user_context.py) ──
+  function generateOpeningMessage(path, q1, name) {
+    const q = (q1 || '').toLowerCase();
+    const hi = name ? `${name}, ` : '';
+
+    if (path === 'deep') {
+      if (q.includes('breakup') || q.includes('relationship'))
+        return `${hi}That kind of loss doesn't just hurt — it reorganizes everything. Your routines, your sense of the future, even your sense of yourself.\n\nCan you tell me what happened?`;
+      if (q.includes('lost') || q.includes('direction'))
+        return `${hi}Feeling directionless is quietly one of the heaviest things to carry — especially when you can't even explain it to people around you.\n\nWhen you say you feel lost, what does that actually look like from the inside?`;
+      if (q.includes('anxiety') || q.includes('overthink'))
+        return `${hi}That constant mental noise is exhausting in a way that's hard to explain to people who haven't felt it.\n\nWhat does your mind usually spiral to? Is there a theme it keeps returning to?`;
+      if (q.includes('loneliness') || q.includes('disconn'))
+        return `${hi}There's a particular loneliness that comes from being surrounded by people and still feeling fundamentally unseen.\n\nWhat does your loneliness look like day to day?`;
+      if (q.includes('pressure') || q.includes('expectation'))
+        return `${hi}That weight of expectations can make you feel like you're performing life rather than living it.\n\nWhere's the pressure coming from most right now?`;
+      return `${hi}Something's been heavy. Even if it's hard to name exactly.\n\nTell me what today feels like — what's the most present thing for you right now?`;
+    } else {
+      if (q.includes('stress') || q.includes('overwhelm'))
+        return `${hi ? 'Hey ' + hi : 'Hey — '}what's going on? What's piling up right now?`;
+      if (q.includes('vent'))
+        return `${hi ? hi + 'go' : 'Go'} ahead. Tell me what happened.`;
+      if (q.includes('decision') || q.includes('clarity'))
+        return `${hi ? hi + "what's" : "What's"} the situation? Walk me through it and we'll think it through together.`;
+      if (q.includes('low') || q.includes('bored'))
+        return `Hey${hi ? ' ' + hi.trim() : ''} — low mood days are real. What's the vibe today?`;
+      if (q.includes('thinking') || q.includes('exploring'))
+        return `${hi ? hi + "I'm" : "I'm"} all ears. What's on your mind?`;
+      return `Hey${hi ? ' ' + hi.trim() : ''} — what's going on for you today?`;
+    }
+  }
+
   // ─── begin session ─────────────────────────
   window.beginSession = async function() {
     const guestId = getGuestId();
     const path = currentPath;
+    const userName = (document.getElementById('ob-name').value || '').trim();
 
     // ★ Mark onboarding as done LOCALLY so refreshes skip it instantly
     localStorage.setItem('ob_done_' + guestId, '1');
+    if (userName) localStorage.setItem('ob_name_' + guestId, userName);
 
     // Build payload for /api/intake
     let payload;
@@ -615,8 +657,9 @@
         q1: answers['d1'] || '',
         q2: answers['d2'] || '',
         q3: answers['d3'] || '',
-        q4: [],    // deep path has no multi-select (simplified)
+        q4: [],
         q5: answers['d4'] || '',
+        first_name: userName,
       };
     } else {
       payload = {
@@ -627,10 +670,14 @@
         q3: '',
         q4: [],
         q5: answers['g3'] || '',
+        first_name: userName,
       };
     }
 
-    // Fire and forget — don't block the UX
+    // ★ Generate opening message CLIENT-SIDE (no race condition with Supabase)
+    const openingMessage = generateOpeningMessage(path, payload.q1, userName);
+
+    // Save to Supabase in background
     fetch('/api/intake', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -642,8 +689,10 @@
 
     hideOverlay();
 
-    // Dispatch custom event so your existing chat.js can listen
-    window.dispatchEvent(new CustomEvent('ob:complete', { detail: payload }));
+    // Dispatch custom event WITH the opening message already computed
+    window.dispatchEvent(new CustomEvent('ob:complete', {
+      detail: { ...payload, openingMessage }
+    }));
   };
 
   function hideOverlay() {
