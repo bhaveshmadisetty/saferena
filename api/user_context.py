@@ -86,6 +86,32 @@ def get_context(guest_id: str) -> dict | None:
         print(f"[user_context] get_context error: {e}")
         return None
 
+def increment_msg_count(guest_id: str):
+    ctx = get_context(guest_id)
+    if not ctx:
+        return
+    
+    current_count = ctx.get("session_msg_count", 0)
+    new_count = current_count + 1
+    
+    payload = {"session_msg_count": new_count}
+    
+    if new_count >= 15:
+        payload["is_locked"] = True
+        # Lock for 3 days
+        from datetime import timedelta
+        payload["unlock_at"] = (datetime.now(timezone.utc) + timedelta(days=3)).isoformat()
+        
+    try:
+        _get_client().patch(
+            f"{_REST_URL}/user_context",
+            headers=_HEADERS,
+            params={"guest_id": f"eq.{guest_id}"},
+            json=payload
+        )
+    except Exception as e:
+        print(f"[user_context] increment_msg_count error: {e}")
+
 
 # ---------------------------------------------------------------------------
 # 3. GET OPENING MESSAGE

@@ -127,6 +127,25 @@ def chat():
             memory_context = ""
     # ---- END MEMORY ----
 
+    # Check rate limits before calling the LLM
+    is_locked = False
+    msg_count = 0
+    if guest_id:
+        try:
+            import api.user_context as uc
+            ctx = uc.get_context(guest_id)
+            if ctx:
+                is_locked = ctx.get("is_locked", False)
+                msg_count = ctx.get("session_msg_count", 0)
+                
+                if is_locked or msg_count >= 15:
+                    return jsonify({"reply": "This session has reached its natural close to encourage rest and reflection. Your thoughts will be here if you choose to return in 3 days. Take care of yourself."}), 200
+                    
+                # Increment count
+                uc.increment_msg_count(guest_id)
+        except Exception as e:
+            print(f"[chat] Rate limit check error: {e}")
+
     try:
         reply = generate_assistant_reply(
             messages,
