@@ -1,20 +1,29 @@
 // ---------------------------------------------------------------------------
-// Guest ID cookie management (7-day persistent anonymous identity)
+// Guest ID management – persistent across page reloads using localStorage.
+// Falls back to a cookie for compatibility, but stores the ID in localStorage
+// so it survives refreshes and tab navigation.
 // ---------------------------------------------------------------------------
 export function getOrCreateGuestId() {
+  const STORAGE_KEY = "guest_id";
   const COOKIE_NAME = "guest_id";
   const EXPIRY_DAYS = 7;
 
-  // Try to read existing cookie
-  const match = document.cookie
+  // 1️⃣ Prefer localStorage (survives refreshes, tabs, and page reloads)
+  let id = localStorage.getItem(STORAGE_KEY);
+  if (id) return id;
+
+  // 2️⃣ If not in localStorage, try the cookie (legacy fallback)
+  const cookieMatch = document.cookie
     .split("; ")
     .find((row) => row.startsWith(`${COOKIE_NAME}=`));
-  if (match) {
-    return match.split("=")[1];
+  if (cookieMatch) {
+    id = cookieMatch.split("=")[1];
+    // Sync to localStorage for future loads
+    localStorage.setItem(STORAGE_KEY, id);
+    return id;
   }
 
-  // Generate new UUID
-  let id;
+  // 3️⃣ No existing ID – generate a new UUID
   if (
     typeof globalThis !== "undefined" &&
     globalThis.crypto &&
@@ -25,7 +34,8 @@ export function getOrCreateGuestId() {
     id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
   }
 
-  // Set cookie with 7-day expiry
+  // Store in both localStorage and a cookie (cookie gives server‑side visibility)
+  localStorage.setItem(STORAGE_KEY, id);
   const expires = new Date(Date.now() + EXPIRY_DAYS * 864e5).toUTCString();
   document.cookie = `${COOKIE_NAME}=${id}; expires=${expires}; path=/; SameSite=Lax`;
   return id;

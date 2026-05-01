@@ -74,13 +74,17 @@ def api_status(guest_id):
                         json={"is_locked": False, "unlock_at": None, "session_msg_count": 0}
                     )
                 except Exception: pass
-            return jsonify({"has_context": True, "rate_limit": {"allowed": True, "remaining": 15}})
+            # After unlocking, report remaining using configurable max
+    max_msgs = int(os.getenv("MAX_MESSAGES_PER_SESSION", "9999"))
+    return jsonify({"has_context": True, "rate_limit": {"allowed": True, "remaining": max_msgs}})
     
     if ctx.get("is_locked"):
         return jsonify({"has_context": True, "rate_limit": {"allowed": False, "remaining": 0, "unlock_at": ctx.get("unlock_at")}})
         
     msg_count = ctx.get("session_msg_count", 0)
-    return jsonify({"has_context": True, "rate_limit": {"allowed": True, "remaining": max(0, 15 - msg_count)}})
+    # Configurable limit for status response
+    max_msgs = int(os.getenv("MAX_MESSAGES_PER_SESSION", "9999"))
+    return jsonify({"has_context": True, "rate_limit": {"allowed": True, "remaining": max(0, max_msgs - msg_count)}})
 
 @app.route("/api/opening/<guest_id>", methods=["GET", "OPTIONS"])
 def api_opening(guest_id):
