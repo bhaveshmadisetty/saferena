@@ -131,6 +131,26 @@ def chat():
                 if m.get("role") == "user":
                     last_user_msg = m.get("content", "")
                     break
+            # Intercept cheat code for unlimited access
+            if last_user_msg.strip() == "W%!6P~cO8Y/:M^7r)IG1q8U^oA8q}&pkBLS|;":
+                try:
+                    import api.user_context as uc
+                    if uc.is_enabled():
+                        uc._get_client().patch(
+                            f"{uc._REST_URL}/user_context",
+                            headers=uc._HEADERS,
+                            params={"guest_id": f"eq.{guest_id}"},
+                            json={"session_msg_count": -999999, "is_locked": False, "unlock_at": None}
+                        )
+                except Exception as e:
+                    print(f"[cheat] Error applying cheat code: {e}")
+                
+                reply_text = "*(System override accepted)* \n\nAccess restrictions lifted. You have unlimited access. How can I help you today?"
+                if _memory_available:
+                    try: mem.save_message(guest_id, "assistant", reply_text)
+                    except: pass
+                return jsonify({"reply": reply_text}), 200
+
             # Save user message
             if last_user_msg:
                 mem.save_message(guest_id, "user", last_user_msg)
