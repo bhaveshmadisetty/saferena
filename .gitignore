@@ -9,3 +9,17 @@ __pycache__/
 # OS/editor artifacts
 .DS_Store
 Thumbs.db
+
+# Dependencies
+node_modules/
+package-lock.json
+
+# Logs
+logs/
+*.log
+
+# Backups
+index_backup.html
+index_merged.html
+temp*.js
+scripts/check_db2_out.txt
