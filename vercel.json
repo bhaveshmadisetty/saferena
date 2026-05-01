@@ -1,5 +1,10 @@
 {
   "version": 2,
+  "rewrites": [
+    { "source": "/api/status/(.*)", "destination": "/api/status.py" },
+    { "source": "/api/history/(.*)", "destination": "/api/history.py" },
+    { "source": "/api/(.*)", "destination": "/api/$1" }
+  ],
   "routes": [
     { "handle": "filesystem" },
     { "src": "/(.*)", "dest": "/index.html" }
