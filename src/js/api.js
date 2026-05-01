@@ -62,7 +62,7 @@ export async function sendMessageToBackend(messages, sessionId) {
 
   // Include guestId for Supabase memory (new field, backend handles gracefully)
   const guestId = getOrCreateGuestId();
-  const payload = { sessionId, messages, guestId };
+  const payload = { sessionId, messages, guestId: guestId };
 
   if (endpoint) {
     const response = await fetch(endpoint, {
