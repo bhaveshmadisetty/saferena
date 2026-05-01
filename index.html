@@ -2277,6 +2277,11 @@ async function sendMessage() {
       const reply = data.reply || data.content || "I am here with you.";
       STATE.messagesHistory.push({ role: 'assistant', content: reply });
       replyLines = reply.split('\n');
+      
+      // Override local quota if cheat code was accepted
+      if (reply.includes("*(System override accepted)*")) {
+         STATE.msgCount = -999999;
+      }
   } catch(e) {
       console.error(e);
       replyLines = ["Sorry, I\'m having trouble connecting right now."];
