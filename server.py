@@ -91,6 +91,21 @@ def api_opening(guest_id):
     msg = uc.get_opening_message(ctx)
     return jsonify({"message": msg, "path": ctx.get("path", "deep")})
 
+@app.route("/api/history/<guest_id>", methods=["GET", "OPTIONS"])
+def api_history(guest_id):
+    if request.method == "OPTIONS": return "", 204
+    if not _memory_available:
+        return jsonify({"history": []})
+    try:
+        # Load last 30 messages
+        recent = mem.load_recent_messages(guest_id, limit=30)
+        # load_recent_messages returns newest first, we want chronological for the UI
+        history = [{"role": m["role"], "content": m["message"]} for m in reversed(recent)]
+        return jsonify({"history": history})
+    except Exception as e:
+        print(f"[history] Error: {e}")
+        return jsonify({"history": []})
+
 @app.route("/api/chat", methods=["POST", "OPTIONS"])
 def chat():
     if request.method == "OPTIONS":
@@ -141,8 +156,13 @@ def chat():
                 if is_locked or msg_count >= 15:
                     return jsonify({"reply": "This session has reached its natural close to encourage rest and reflection. Your thoughts will be here if you choose to return in 3 days. Take care of yourself."}), 200
                     
-                # Increment count
-                uc.increment_msg_count(guest_id)
+                # Increment count moved to after successful LLM response to avoid charging for errors
+            elif _memory_available:
+                # FALLBACK: if user_context table is missing, use chat_messages count
+                recent = mem.load_recent_messages(guest_id, limit=20)
+                user_count = len([m for m in recent if m.get("role") == "user"])
+                if user_count > 5:
+                    return jsonify({"reply": "This session has reached its natural close to encourage rest and reflection. Your thoughts will be here if you choose to return in 3 days. Take care of yourself."}), 200
         except Exception as e:
             print(f"[chat] Rate limit check error: {e}")
 
@@ -157,11 +177,19 @@ def chat():
             return jsonify({"error": "Pipeline returned non-string reply"}), 500
 
         # ---- MEMORY: Save assistant reply ----
-        if guest_id and _memory_available and reply:
+        if guest_id and reply:
+            if _memory_available:
+                try:
+                    mem.save_message(guest_id, "assistant", reply)
+                except Exception as mem_err:
+                    print(f"[memory] Non-fatal save error: {mem_err}")
+            
+            # Increment quota ONLY after successful generation
             try:
-                mem.save_message(guest_id, "assistant", reply)
-            except Exception as mem_err:
-                print(f"[memory] Non-fatal save error: {mem_err}")
+                import api.user_context as uc
+                uc.increment_msg_count(guest_id)
+            except Exception as uc_err:
+                print(f"[chat] Failed to increment count: {uc_err}")
         # ---- END MEMORY ----
 
         return jsonify({"reply": reply}), 200

@@ -247,7 +247,7 @@ Tone preference: {q5}
                 context_block += "\nTONE DIRECTIVE: Direct and honest. No sugarcoating. Still kind, but say what you actually think.\n"
 
     count = ctx.get("session_msg_count", 0)
-    if count >= 13:
+    if count >= 12:
         context_block += f"\n⚠️ MESSAGE LIMIT: {count}/15 messages used. Naturally bring the session toward a close. Ask if there's anything important to cover before the session ends.\n"
     if count >= 15:
         context_block += "\n⚠️ FINAL MESSAGE: Give a warm, meaningful closing. Reference what they shared. Tell them you'll remember. Mention they can return in 3 days.\n"

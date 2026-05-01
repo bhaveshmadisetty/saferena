@@ -53,7 +53,7 @@ class handler(BaseHTTPRequestHandler):
                     
                     self._json_response(200, {
                         "has_context": True, 
-                        "rate_limit": {"allowed": True, "remaining": 15}
+                        "rate_limit": {"allowed": True, "remaining": 5}
                     })
                     return
 

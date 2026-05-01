@@ -78,13 +78,22 @@ class handler(BaseHTTPRequestHandler):
                         is_locked = ctx.get("is_locked", False)
                         msg_count = ctx.get("session_msg_count", 0)
                         
-                        if is_locked or msg_count >= 15:
+                        if is_locked or msg_count >= 5:
                             return self._json_response(200, {
                                 "reply": "This session has reached its natural close to encourage rest and reflection. Your thoughts will be here if you choose to return in 3 days. Take care of yourself."
                             })
                             
                         # Increment count
                         uc.increment_msg_count(guest_id)
+                    else:
+                        # FALLBACK: if user_context table is missing, use chat_messages count
+                        import supabase_memory as mem
+                        recent = mem.load_recent_messages(guest_id, limit=20)
+                        user_count = len([m for m in recent if m.get("role") == "user"])
+                        if user_count > 5:
+                            return self._json_response(200, {
+                                "reply": "This session has reached its natural close to encourage rest and reflection. Your thoughts will be here if you choose to return in 3 days. Take care of yourself."
+                            })
                 except Exception as e:
                     print(f"[chat] Rate limit check error: {e}")
 
