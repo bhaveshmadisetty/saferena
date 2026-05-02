@@ -478,8 +478,16 @@ body {
 }
 
 /* ─── COMPOSER ───────────────────────────────────── */
+/* composer-wrap must stay display:block — never flex (hint + inner as row breaks width). */
 .composer-wrap {
   flex-shrink: 0;
+  flex-grow: 0;
+  align-self: stretch;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  display: block;
   background: var(--surface);
   border-top: 1px solid var(--border);
   padding: 12px 0 max(12px, env(safe-area-inset-bottom));
@@ -492,15 +500,23 @@ body {
 }
 
 .composer-inner {
+  width: 100%;
   max-width: 760px;
-  margin: 0 auto;
-  padding: 0 20px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 0 24px;
+  box-sizing: border-box;
+  min-width: 0;
+  display: block;
 }
 
 .composer-box {
   display: flex;
   align-items: flex-end;
   gap: 10px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   background: var(--surf2);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
@@ -514,13 +530,29 @@ body {
 }
 
 .composer-textarea {
-  flex: 1;
+  flex: 1 1 0%;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   min-height: 28px;
   max-height: 140px;
   font-size: 14.5px;
   line-height: 1.55;
   color: var(--text);
   caret-color: var(--primary);
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.composer-textarea::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .composer-textarea::placeholder { color: var(--muted); }
@@ -1037,7 +1069,7 @@ body {
   .sheet-overlay { display: block; }
   .bottom-sheet { display: flex; }
   .messages-inner { padding: 0 16px; }
-  .composer-inner { padding: 0 12px; }
+  .composer-inner { padding: 0 16px; }
   .msg-body { max-width: 85%; }
   .header-status { display: none; }
 }
@@ -1791,7 +1823,7 @@ body {
 
     <!-- Composer -->
     <div class="composer-wrap" id="composerWrap">
-      <div class="composer-inner">
+      <div class="composer-inner" id="composerInner">
         <div class="composer-box" id="composerBox">
           <textarea
             class="composer-textarea"
@@ -1932,6 +1964,62 @@ const STATE = {
   hasPersonalKey: false,
 };
 
+const STORAGE_MSG_COUNT = 'ss_msg_count';
+const STORAGE_LOCKED_UNTIL = 'ss_locked_until';
+
+let gateCountdownTimer = null;
+
+function stopGateCountdown() {
+  if (gateCountdownTimer !== null) {
+    clearTimeout(gateCountdownTimer);
+    gateCountdownTimer = null;
+  }
+}
+
+function persistClientQuota() {
+  if (STATE.hasPersonalKey) return;
+  try {
+    localStorage.setItem(STORAGE_MSG_COUNT, String(STATE.msgCount));
+    if (STATE.unlockTime) localStorage.setItem(STORAGE_LOCKED_UNTIL, String(STATE.unlockTime));
+  } catch (e) {}
+}
+
+function restoreClientQuotaFallback() {
+  if (STATE.hasPersonalKey) return;
+  try {
+    const cnt = parseInt(localStorage.getItem(STORAGE_MSG_COUNT) || '-1', 10);
+    const until = parseInt(localStorage.getItem(STORAGE_LOCKED_UNTIL) || '0', 10);
+    if (Number.isFinite(cnt) && cnt >= 0) STATE.msgCount = Math.min(cnt, 999);
+    if (Number.isFinite(until) && until > 0) STATE.unlockTime = until;
+    if (STATE.unlockTime && Date.now() >= STATE.unlockTime) {
+      STATE.unlockTime = null;
+      STATE.msgCount = 0;
+      localStorage.removeItem(STORAGE_LOCKED_UNTIL);
+      try { localStorage.setItem(STORAGE_MSG_COUNT, '0'); } catch (e) {}
+    }
+  } catch (e) {}
+}
+
+/** After gate / unlimited unlock: never use display:flex on composer-wrap (row crushes input + shows pseudo-spinners). */
+function restoreComposerLayoutAfterUnlock() {
+  const strip = (el, props) => {
+    if (!el || !el.style) return;
+    props.forEach((p) => { try { el.style.removeProperty(p); } catch (e) {} });
+  };
+  const layoutProps = ['width', 'max-width', 'min-width', 'flex', 'flex-basis', 'flex-grow', 'flex-shrink', 'align-self', 'transform'];
+  [els.composerInner, els.composerBox, els.composerInput].forEach((el) => { if (el) strip(el, layoutProps); });
+  strip(els.composerWrap, [...layoutProps, 'display', 'opacity', 'pointer-events']);
+  els.composerWrap.style.display = 'block';
+  els.composerWrap.style.opacity = '1';
+  els.composerWrap.style.pointerEvents = '';
+  els.composerBox.classList.remove('focused');
+  els.composerWrap.classList.remove('focused');
+  if (els.composerInput) {
+    els.composerInput.style.removeProperty('height');
+    els.composerInput.style.height = 'auto';
+  }
+}
+
 /* ─────────────────────────────────────────
    CURATED OPENING MESSAGES
    TODO: These are populated by onboarding context.
@@ -2030,6 +2118,7 @@ const els = {
   preparingLabel:  $('preparingLabel'),
   typingRow:       $('typingRow'),
   composerWrap:    $('composerWrap'),
+  composerInner:   $('composerInner'),
   composerBox:     $('composerBox'),
   composerInput:   $('composerInput'),
   sendBtn:         $('sendBtn'),
@@ -2350,7 +2439,7 @@ function disableInput() {
    SEND MESSAGE
 ───────────────────────────────────────── */
 async function sendMessage() {
-  if (!STATE.inputEnabled || STATE.isLocked) return;
+  if (!STATE.inputEnabled || (STATE.isLocked && !STATE.hasPersonalKey)) return;
   const text = els.composerInput.value.trim();
   if (!text) return;
 
@@ -2411,6 +2500,7 @@ async function sendMessage() {
   // Quota is increased only after a successful AI reply (if not using personal key)
   if (!STATE.hasPersonalKey) {
     STATE.msgCount++;
+    persistClientQuota();
     updateUsageUI();
   }
   
@@ -2427,6 +2517,7 @@ async function sendMessage() {
    SHOW GATE
 ───────────────────────────────────────── */
 function showGate() {
+  if (STATE.hasPersonalKey) return;
   STATE.isLocked = true;
 
   // Crossfade composer → gate
@@ -2438,6 +2529,7 @@ function showGate() {
     els.gateWrap.removeAttribute('aria-hidden');
     requestAnimationFrame(() => els.gateWrap.classList.add('visible'));
     startCountdown();
+    persistClientQuota();
   }, 350);
 
   // A11y
@@ -2445,22 +2537,32 @@ function showGate() {
 }
 
 /* ─────────────────────────────────────────
-   START COUNTDOWN (24h)
+   START COUNTDOWN (24h) — absolute unlock time, persisted
 ───────────────────────────────────────── */
 function startCountdown() {
+  stopGateCountdown();
   if (!STATE.unlockTime) {
     const RESET_HOURS = 24;
     STATE.unlockTime = Date.now() + RESET_HOURS * 60 * 60 * 1000;
   }
+  persistClientQuota();
 
   function tick() {
+    if (!STATE.isLocked || STATE.hasPersonalKey) {
+      stopGateCountdown();
+      return;
+    }
     const diff = STATE.unlockTime - Date.now();
-    if (diff <= 0) { els.gateCountdown.textContent = 'Ready now'; return; }
+    if (diff <= 0) {
+      els.gateCountdown.textContent = 'Ready now';
+      stopGateCountdown();
+      return;
+    }
     const h = Math.floor(diff / 3600000);
     const m = Math.floor((diff % 3600000) / 60000);
     const s = Math.floor((diff % 60000) / 1000);
     els.gateCountdown.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-    setTimeout(tick, 1000);
+    gateCountdownTimer = setTimeout(tick, 1000);
   }
   tick();
 }
@@ -2824,17 +2926,20 @@ function enableUnlimitedUI() {
   const headerStatusSpan = document.querySelector('.header-status > span');
   if (headerStatusSpan && headerStatusSpan.id !== 'unlimitedBadge') headerStatusSpan.style.display = 'none';
   
-  // Unlock if locked
+  // Unlock if locked — composer-wrap must stay display:block (not flex), or hint+inner become a row and crush the textarea.
   if (STATE.isLocked) {
     STATE.isLocked = false;
+    stopGateCountdown();
     els.gateWrap.classList.remove('visible');
     setTimeout(() => {
       els.gateWrap.style.display = 'none';
-      els.composerWrap.style.display = 'flex';
-      els.composerWrap.style.opacity = '1';
-      els.composerWrap.style.pointerEvents = 'auto';
+      restoreComposerLayoutAfterUnlock();
+      autoResizeTextarea();
       enableInput();
     }, 350);
+  } else {
+    restoreComposerLayoutAfterUnlock();
+    autoResizeTextarea();
   }
 }
 
@@ -2918,7 +3023,13 @@ els.gateRemindBtn.addEventListener('click', () => {
 ───────────────────────────────────────── */
 els.resetBtn.addEventListener('click', () => {
   if (!confirm('Clear this session? Your conversation will be removed.')) return;
-  try { sessionStorage.clear(); localStorage.removeItem('ss_future_note'); } catch(e) {}
+  try {
+    sessionStorage.clear();
+    localStorage.removeItem('ss_future_note');
+    localStorage.removeItem(STORAGE_MSG_COUNT);
+    localStorage.removeItem(STORAGE_LOCKED_UNTIL);
+    localStorage.removeItem('ss_personal_key');
+  } catch(e) {}
   location.reload();
 });
 
@@ -3026,10 +3137,17 @@ async function init() {
         if (data.rate_limit.unlock_at) {
           STATE.unlockTime = new Date(data.rate_limit.unlock_at).getTime();
         }
+        persistClientQuota();
         updateUsageUI();
-        if (data.rate_limit.allowed === false || STATE.msgCount >= STATE.MAX_MSGS) {
+        if (!STATE.hasPersonalKey && (data.rate_limit.allowed === false || STATE.msgCount >= STATE.MAX_MSGS)) {
           showGate();
         }
+      }
+    } else {
+      restoreClientQuotaFallback();
+      updateUsageUI();
+      if (!STATE.hasPersonalKey && STATE.msgCount >= STATE.MAX_MSGS && STATE.unlockTime && Date.now() < STATE.unlockTime) {
+        showGate();
       }
     }
 
