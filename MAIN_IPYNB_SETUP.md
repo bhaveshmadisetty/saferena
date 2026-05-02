@@ -22,14 +22,14 @@ server = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
 thread = threading.Thread(target=server.serve_forever, daemon=True)
 thread.start()
 
-print(f"Serving safe space UI at http://127.0.0.1:{PORT}/index.html")
+print(f"Serving safe space UI at http://127.0.0.1:{PORT}/chatindex.html")
 ```
 
 ## 2) Display it in `Main.ipynb`
 
 ```python
 from IPython.display import IFrame
-IFrame(src="http://127.0.0.1:8765/index.html", width="100%", height=780)
+IFrame(src="http://127.0.0.1:8765/chatindex.html", width="100%", height=780)
 ```
 
 ## 3) Connect your Python backend endpoint later
@@ -42,9 +42,8 @@ Before loading the iframe, if your backend endpoint is available, inject this in
 - expected response JSON:
   - `{"reply": "text"}` (or `{"content": "text"}`)
 
-Current frontend adapter lives in `api.js` as `sendMessageToBackend(messages, sessionId)`.
-
-If `window.SAFE_SPACE_API_ENDPOINT` is set, it uses your backend; otherwise it uses a local 1.5s mock.
+- **Primary UI (`chatindex.html`)**: inline script; wire `fetch('/api/chat', …)` where marked `TODO` (same JSON contract as below).
+- **Legacy bundle (`index.html`)**: `api.js` → `sendMessageToBackend(messages, sessionId)`. If `window.SAFE_SPACE_API_ENDPOINT` is set, it uses your backend; otherwise a local mock.
 
 ## 4) Vercel hosting (frontend + API)
 
@@ -56,8 +55,9 @@ This folder now includes:
 
 When deployed to Vercel:
 
-- website serves from `index.html`
-- frontend calls `/api/chat` automatically
+- website serves **`chatindex.html`** at `/` (see `vercel.json`)
+- legacy **`index.html`** is still available if opened by path
+- wire **`chatindex.html`** to POST `/api/chat` when you replace the demo replies
 
 ### Important about `Main.ipynb`
 
