@@ -967,6 +967,69 @@ body {
   justify-content: center;
   color: var(--muted);
 }
+.gate-divider {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin: 10px 0 4px;
+}
+.gate-divider::before, .gate-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+.gate-key-box {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.gate-key-input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--surf2);
+  border: 1px solid var(--border);
+  font-size: 13.5px;
+  color: var(--text);
+  transition: border-color .2s, box-shadow .2s;
+}
+.gate-key-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--pglow);
+  outline: none;
+}
+.gate-key-btn {
+  width: 100%;
+  padding: 10px;
+  border-radius: 12px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background .2s, transform .1s;
+}
+.gate-key-btn:hover { background: color-mix(in srgb, var(--primary) 90%, white 10%); }
+.gate-key-btn:active { transform: scale(.98); }
+.gate-key-error {
+  display: none;
+  font-size: 11.5px;
+  color: var(--warm);
+  margin-top: -2px;
+}
+.gate-key-note {
+  font-size: 11px;
+  color: var(--muted);
+  opacity: .7;
+}
 
 /* ─── RESPONSIVE ─────────────────────────────────── */
 @media (max-width: 768px) {
@@ -1762,6 +1825,15 @@ body {
       <div class="gate-title">A pause, not an ending.</div>
       <p class="gate-sub">You've reached the end of today's session. Your conversation and this space will be waiting for you.</p>
       <div class="gate-countdown" id="gateCountdown" aria-live="polite">—</div>
+
+      <!-- API KEY QUICK UNLOCK -->
+      <div class="gate-divider">or continue with your own API key</div>
+      <div class="gate-key-box">
+        <input type="password" id="gateApiKeyInput" class="gate-key-input" placeholder="Enter OpenRouter API Key" autocomplete="off" />
+        <button class="gate-key-btn" id="gateApiKeyUnlockBtn">Unlock Unlimited Chat</button>
+        <div id="gateApiKeyError" class="gate-key-error">Invalid API key. Please try again.</div>
+        <p class="gate-key-note">Your key is used only for your requests.</p>
+      </div>
       <div class="gate-actions">
         <button class="gate-btn primary" id="gateNoteBtn" aria-label="Write a note to future self">Write a note to future self</button>
         <button class="gate-btn" id="gateRemindBtn" aria-label="Remind me when session resets">Remind me when I'm back</button>
@@ -1997,6 +2069,9 @@ const els = {
   apiKeySaveBtn:   $('apiKeySaveBtn'),
   apiKeyRemoveBtn: $('apiKeyRemoveBtn'),
   apiKeyStatus:    $('apiKeyStatus'),
+  gateApiKeyInput:  $('gateApiKeyInput'),
+  gateApiKeyUnlockBtn: $('gateApiKeyUnlockBtn'),
+  gateApiKeyError:  $('gateApiKeyError'),
 };
 
 /* ─────────────────────────────────────────
@@ -2798,6 +2873,35 @@ els.gateNoteBtn.addEventListener('click', () => {
   els.noteTextSidebar.scrollIntoView({ behavior: 'smooth' });
   els.noteTextSidebar.style.boxShadow = '0 0 0 2px var(--pglow)';
   setTimeout(() => els.noteTextSidebar.style.boxShadow = '', 1400);
+});
+
+els.gateApiKeyUnlockBtn.addEventListener('click', async () => {
+  const key = els.gateApiKeyInput.value.trim();
+  if (!key) return;
+  
+  els.gateApiKeyUnlockBtn.disabled = true;
+  els.gateApiKeyUnlockBtn.textContent = 'Validating...';
+  els.gateApiKeyError.style.display = 'none';
+  
+  try {
+    const res = await fetch('https://openrouter.ai/api/v1/auth/key', {
+      headers: { 'Authorization': `Bearer ${key}` }
+    });
+    
+    if (res.ok) {
+      localStorage.setItem('ss_personal_key', key);
+      STATE.hasPersonalKey = true;
+      enableUnlimitedUI();
+      els.gateApiKeyInput.value = '';
+    } else {
+      els.gateApiKeyError.style.display = 'block';
+    }
+  } catch (e) {
+    els.gateApiKeyError.style.display = 'block';
+  } finally {
+    els.gateApiKeyUnlockBtn.disabled = false;
+    els.gateApiKeyUnlockBtn.textContent = 'Unlock Unlimited Chat';
+  }
 });
 
 els.gateRemindBtn.addEventListener('click', () => {
