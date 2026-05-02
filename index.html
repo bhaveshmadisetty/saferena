@@ -2000,6 +2000,39 @@ function restoreClientQuotaFallback() {
   } catch (e) {}
 }
 
+/** Apply /api/status JSON rate_limit object; returns true if applied. */
+function applyRateLimitPayload(data) {
+  if (!data || !data.rate_limit) return false;
+  const rl = data.rate_limit;
+  if (rl.max_messages) STATE.MAX_MSGS = rl.max_messages;
+  STATE.msgCount = Math.max(0, STATE.MAX_MSGS - rl.remaining);
+  if (rl.unlock_at) {
+    STATE.unlockTime = new Date(rl.unlock_at).getTime();
+  }
+  return true;
+}
+
+/** After /api/chat, re-sync UI from server (source of truth). */
+async function syncQuotaFromServer() {
+  if (STATE.hasPersonalKey) return true;
+  try {
+    const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') && !window.location.port.includes('8080') ? 'http://localhost:8080' : '';
+    const statusRes = await fetch(API_BASE + `/api/status/${encodeURIComponent(getGuestId())}`);
+    if (!statusRes.ok) return false;
+    const data = await statusRes.json();
+    if (!applyRateLimitPayload(data)) return false;
+    persistClientQuota();
+    updateUsageUI();
+    if (!STATE.hasPersonalKey && (data.rate_limit.allowed === false || STATE.msgCount >= STATE.MAX_MSGS)) {
+      showGate();
+    }
+    return true;
+  } catch (e) {
+    console.warn('syncQuotaFromServer', e);
+    return false;
+  }
+}
+
 /** After gate / unlimited unlock: never use display:flex on composer-wrap (row crushes input + shows pseudo-spinners). */
 function restoreComposerLayoutAfterUnlock() {
   const strip = (el, props) => {
@@ -2167,12 +2200,24 @@ const els = {
    UTILS
 ───────────────────────────────────────── */
 function getGuestId() {
-  let id = document.cookie.split('; ').find(r => r.startsWith('guest_id='))?.split('=')[1];
+  let id = null;
+  try {
+    id = localStorage.getItem('ss_guest_id');
+  } catch (e) {}
+  if (!id) {
+    const raw = document.cookie.split('; ').find(r => r.startsWith('guest_id='))?.split('=').slice(1).join('=');
+    if (raw) {
+      try { id = decodeURIComponent(raw); } catch (e) { id = raw; }
+    }
+  }
   if (!id) {
     id = crypto.randomUUID();
-    const exp = new Date(Date.now() + 7 * 864e5).toUTCString();
-    document.cookie = `guest_id=${id}; expires=${exp}; path=/; SameSite=Lax`;
   }
+  try {
+    localStorage.setItem('ss_guest_id', id);
+  } catch (e) {}
+  const exp = new Date(Date.now() + 400 * 864e5).toUTCString();
+  document.cookie = `guest_id=${encodeURIComponent(id)}; expires=${exp}; path=/; SameSite=Lax`;
   return id;
 }
 
@@ -2468,6 +2513,7 @@ async function sendMessage() {
   showTyping();
 
   let replyLines = ["I am here with you."];
+  let replyText = '';
   try {
       const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') && !window.location.port.includes('8080') ? 'http://localhost:8080' : '';
       const payload = { messages: STATE.messagesHistory, guestId: getGuestId() };
@@ -2482,6 +2528,7 @@ async function sendMessage() {
       });
       const data = await response.json();
       const reply = data.reply || data.content || "I am here with you.";
+      replyText = reply;
       STATE.messagesHistory.push({ role: 'assistant', content: reply });
       replyLines = reply.split('\n');
       
@@ -2497,13 +2544,26 @@ async function sendMessage() {
   hideTyping();
   appendMessage('ai', msgLinesToHTML(replyLines));
 
-  // Quota is increased only after a successful AI reply (if not using personal key)
-  if (!STATE.hasPersonalKey) {
-    STATE.msgCount++;
-    persistClientQuota();
-    updateUsageUI();
+  const sessionClosedReply = replyText.includes('This session has reached its natural close');
+
+  if (!STATE.hasPersonalKey && !replyText.includes('*(System override accepted)*')) {
+    const synced = await syncQuotaFromServer();
+    if (sessionClosedReply) {
+      STATE.msgCount = Math.max(STATE.msgCount, STATE.MAX_MSGS);
+      persistClientQuota();
+      updateUsageUI();
+      disableInput();
+      await sleep(200);
+      showGate();
+      return;
+    }
+    if (!synced) {
+      STATE.msgCount++;
+      persistClientQuota();
+      updateUsageUI();
+    }
   }
-  
+
   enableInput();
 
   if (!STATE.hasPersonalKey && STATE.msgCount >= STATE.MAX_MSGS) {
@@ -3029,6 +3089,8 @@ els.resetBtn.addEventListener('click', () => {
     localStorage.removeItem(STORAGE_MSG_COUNT);
     localStorage.removeItem(STORAGE_LOCKED_UNTIL);
     localStorage.removeItem('ss_personal_key');
+    localStorage.removeItem('ss_guest_id');
+    document.cookie = 'guest_id=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax';
   } catch(e) {}
   location.reload();
 });
@@ -3129,14 +3191,7 @@ async function init() {
     const statusRes = await fetch(API_BASE + `/api/status/${guestId}`);
     if (statusRes.ok) {
       const data = await statusRes.json();
-      if (data.rate_limit) {
-        if (data.rate_limit.max_messages) {
-          STATE.MAX_MSGS = data.rate_limit.max_messages;
-        }
-        STATE.msgCount = Math.max(0, STATE.MAX_MSGS - data.rate_limit.remaining);
-        if (data.rate_limit.unlock_at) {
-          STATE.unlockTime = new Date(data.rate_limit.unlock_at).getTime();
-        }
+      if (applyRateLimitPayload(data)) {
         persistClientQuota();
         updateUsageUI();
         if (!STATE.hasPersonalKey && (data.rate_limit.allowed === false || STATE.msgCount >= STATE.MAX_MSGS)) {

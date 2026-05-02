@@ -46,6 +46,8 @@ class handler(BaseHTTPRequestHandler):
                 self._json_response(400, {"error": "'messages' must be an array"})
                 return
 
+            last_user_msg = ""
+
             # ---- MEMORY: Save user message & load history ----
             memory_context = ""
             if guest_id:
@@ -90,32 +92,32 @@ class handler(BaseHTTPRequestHandler):
                     except: pass
                 return self._json_response(200, {"reply": reply_text})
 
-            # Check rate limits before calling the LLM
-            is_locked = False
-            msg_count = 0
-            # Configurable session limit (default 15)
+            # Check rate limits before calling the LLM (must match /api/status logic)
             MAX_MESSAGES = int(os.getenv("MAX_MESSAGES_PER_SESSION", "15"))
             if guest_id and not personal_api_key:
                 try:
                     import user_context as uc
-                    ctx = uc.get_context(guest_id)
+                    ctx = uc.get_context(guest_id) if uc.is_enabled() else None
                     if ctx:
-                        is_locked = ctx.get("is_locked", False)
-                        msg_count = ctx.get("session_msg_count", 0)
-                        
-                        if msg_count >= MAX_MESSAGES:
+                        is_locked = bool(ctx.get("is_locked", False))
+                        msg_count = int(ctx.get("session_msg_count", 0))
+                        if is_locked or msg_count >= MAX_MESSAGES:
                             return self._json_response(200, {
                                 "reply": "This session has reached its natural close to encourage rest and reflection. Your thoughts will be here if you choose to return in 3 days. Take care of yourself."
                             })
-                    else:
-                        # FALLBACK: if user_context table is missing, use chat_messages count
-                        import supabase_memory as mem
-                        recent = mem.load_recent_messages(guest_id, limit=20)
-                        user_count = len([m for m in recent if m.get("role") == "user"])
-                        if user_count >= MAX_MESSAGES:
-                            return self._json_response(200, {
-                                "reply": "This session has reached its natural close to encourage rest and reflection. Your thoughts will be here if you choose to return in 3 days. Take care of yourself."
-                            })
+                    elif not uc.is_enabled():
+                        # Legacy: no user_context table — approximate from recent chat rows only
+                        try:
+                            import supabase_memory as mem
+                            recent = mem.load_recent_messages(guest_id, limit=20)
+                            user_count = len([m for m in recent if m.get("role") == "user"])
+                            if user_count >= MAX_MESSAGES:
+                                return self._json_response(200, {
+                                    "reply": "This session has reached its natural close to encourage rest and reflection. Your thoughts will be here if you choose to return in 3 days. Take care of yourself."
+                                })
+                        except Exception:
+                            pass
+                    # If user_context is enabled but no row yet, treat as 0 used (row is created on increment)
                 except Exception as e:
                     print(f"[chat] Rate limit check error: {e}")
 
