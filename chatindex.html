@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Safe Space</title>
+<title>Saferena</title>
 <meta name="description" content="An anonymous space for emotional support." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -1182,7 +1182,7 @@ body {
       <path d="M14 14.5 C15.5 13, 18 12.5, 18.5 10.5" stroke="var(--primary)" stroke-width=".8" stroke-linecap="round" opacity=".4"/>
     </svg>
 
-    <span class="header-name">Safe Space</span>
+    <span class="header-name">Saferena</span>
   </div>
 
   <div class="header-status" aria-live="polite" aria-label="Session status">
@@ -1703,7 +1703,7 @@ async function validateOpenRouterApiKey(apiKey) {
     method: 'GET',
     headers: {
       Authorization: 'Bearer ' + trimmed,
-      ...(origin ? { 'HTTP-Referer': origin, 'X-OpenRouter-Title': 'Safe Space' } : {}),
+      ...(origin ? { 'HTTP-Referer': origin, 'X-OpenRouter-Title': 'Saferena' } : {}),
     },
   });
 
@@ -1828,7 +1828,7 @@ function appendMessage(role, htmlContent, opts = {}) {
   row.setAttribute('role', 'article');
 
   const now = fmtTime();
-  const ariaLabel = role === 'ai' ? 'Safe Space says' : 'You said';
+  const ariaLabel = role === 'ai' ? 'Saferena says' : 'You said';
 
   if (role === 'ai') {
     row.innerHTML = `
@@ -1869,7 +1869,7 @@ function appendMessage(role, htmlContent, opts = {}) {
 
   // A11y announcement
   const textContent = htmlContent.replace(/<[^>]+>/g, ' ').trim();
-  els.a11yLive.textContent = (role === 'ai' ? 'Safe Space: ' : 'You: ') + textContent;
+  els.a11yLive.textContent = (role === 'ai' ? 'Saferena: ' : 'You: ') + textContent;
 
   scrollToBottom();
   return row;
@@ -2001,7 +2001,7 @@ async function revealCuratedMessage() {
   try { sessionStorage.setItem('ss_intro_done', '1'); } catch (e) {}
 
   // A11y announce
-  els.a11yLive.textContent = 'Safe Space says: ' + lines.filter(l => l).join(' ');
+  els.a11yLive.textContent = 'Saferena says: ' + lines.filter(l => l).join(' ');
 }
 
 /* ─────────────────────────────────────────

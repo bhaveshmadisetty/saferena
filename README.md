@@ -1,10 +1,10 @@
-# Safe Space Web App (Vercel Ready)
+# Saferena Web App (Vercel Ready)
 
 This folder is a standalone production-ready deployment unit for your AI psychological assistant UI and backend endpoint.
 
 ## What this includes
 
-- Static frontend (primary Safe Space UI — limits, gate, OpenRouter BYOK, persistence):
+- Static frontend (primary Saferena UI — limits, gate, OpenRouter BYOK, persistence):
   - **`chatindex.html`** (served at `/` on Vercel via `vercel.json`)
 - Alternate / legacy bundle (module chat shell):
   - `index.html`
@@ -67,5 +67,5 @@ python -m http.server 8765
 
 Open:
 
-- `http://127.0.0.1:8765/chatindex.html` (full Safe Space experience)
+- `http://127.0.0.1:8765/chatindex.html` (full Saferena experience)
 - `http://127.0.0.1:8765/index.html` (legacy module UI)

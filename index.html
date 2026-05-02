@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<title>Safe Space</title>
+<title>Saferena</title>
 <meta name="description" content="An anonymous space for emotional support." />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -222,6 +222,17 @@ body {
   color: var(--text);
   font-weight: 600;
   transition: color .3s;
+}
+
+.header-quota-hint {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  white-space: nowrap;
+  letter-spacing: .02em;
+  max-width: 9rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .theme-btn {
@@ -1637,7 +1648,7 @@ body {
       <path d="M14 14.5 C15.5 13, 18 12.5, 18.5 10.5" stroke="var(--primary)" stroke-width=".8" stroke-linecap="round" opacity=".4"/>
     </svg>
 
-    <span class="header-name">Safe Space</span>
+    <span class="header-name">Saferena</span>
   </div>
 
   <div class="header-status" aria-live="polite" aria-label="Session status">
@@ -1655,6 +1666,7 @@ body {
       <span style="color:var(--muted)">/</span>
       <span>15</span>
     </div>
+    <span class="header-quota-hint" id="headerQuotaHint" aria-live="polite"></span>
 
     <button class="theme-btn" id="apiKeyBtn" aria-label="Set personal OpenRouter API Key" title="API Key Settings">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -2005,7 +2017,14 @@ function applyRateLimitPayload(data) {
   if (!data || !data.rate_limit) return false;
   const rl = data.rate_limit;
   if (rl.max_messages) STATE.MAX_MSGS = rl.max_messages;
-  STATE.msgCount = Math.max(0, STATE.MAX_MSGS - rl.remaining);
+  const rem = Number(rl.remaining);
+  if (Number.isFinite(rem)) {
+    STATE.msgCount = Math.max(0, STATE.MAX_MSGS - rem);
+  } else if (rl.allowed === false) {
+    STATE.msgCount = STATE.MAX_MSGS;
+  } else {
+    STATE.msgCount = 0;
+  }
   if (rl.unlock_at) {
     STATE.unlockTime = new Date(rl.unlock_at).getTime();
   }
@@ -2018,9 +2037,20 @@ async function syncQuotaFromServer() {
   try {
     const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') && !window.location.port.includes('8080') ? 'http://localhost:8080' : '';
     const statusRes = await fetch(API_BASE + `/api/status/${encodeURIComponent(getGuestId())}`);
-    if (!statusRes.ok) return false;
+    if (!statusRes.ok) {
+      restoreClientQuotaFallback();
+      updateUsageUI();
+      return false;
+    }
     const data = await statusRes.json();
-    if (!applyRateLimitPayload(data)) return false;
+    if (!applyRateLimitPayload(data)) {
+      restoreClientQuotaFallback();
+      updateUsageUI();
+      if (!STATE.hasPersonalKey && STATE.msgCount >= STATE.MAX_MSGS) {
+        showGate();
+      }
+      return false;
+    }
     persistClientQuota();
     updateUsageUI();
     if (!STATE.hasPersonalKey && (data.rate_limit.allowed === false || STATE.msgCount >= STATE.MAX_MSGS)) {
@@ -2029,6 +2059,8 @@ async function syncQuotaFromServer() {
     return true;
   } catch (e) {
     console.warn('syncQuotaFromServer', e);
+    restoreClientQuotaFallback();
+    updateUsageUI();
     return false;
   }
 }
@@ -2146,6 +2178,7 @@ const els = {
   progressTrack:   $('progressTrack'),
   msgCounter:      $('msgCounter'),
   msgCountNum:     $('msgCountNum'),
+  headerQuotaHint: $('headerQuotaHint'),
   messagesWrap:    $('messagesWrap'),
   messagesInner:   $('messagesInner'),
   preparingLabel:  $('preparingLabel'),
@@ -2261,6 +2294,7 @@ function updateUsageUI() {
 
   // Counter pill
   els.msgCountNum.textContent = used;
+  els.msgCounter.setAttribute('aria-label', `${used} of ${max} used, ${remaining} free messages remaining`);
   els.progressTrack.setAttribute('aria-valuenow', used);
 
   // Progress bar
@@ -2286,6 +2320,18 @@ function updateUsageUI() {
   // Warn color on counter
   if (isWarn) els.msgCountNum.style.color = 'var(--warm)';
   else els.msgCountNum.style.color = '';
+
+  if (els.headerQuotaHint) {
+    if (STATE.hasPersonalKey) {
+      els.headerQuotaHint.style.display = 'none';
+      els.headerQuotaHint.textContent = '';
+    } else {
+      els.headerQuotaHint.style.display = '';
+      els.headerQuotaHint.textContent = remaining === 0
+        ? 'No free messages left'
+        : `${remaining} free ${remaining === 1 ? 'message' : 'messages'} left`;
+    }
+  }
 }
 
 /* ─────────────────────────────────────────
@@ -2309,7 +2355,7 @@ function appendMessage(role, htmlContent, opts = {}) {
   row.setAttribute('role', 'article');
 
   const now = fmtTime();
-  const ariaLabel = role === 'ai' ? 'Safe Space says' : 'You said';
+  const ariaLabel = role === 'ai' ? 'Saferena says' : 'You said';
 
   if (role === 'ai') {
     row.innerHTML = `
@@ -2350,7 +2396,7 @@ function appendMessage(role, htmlContent, opts = {}) {
 
   // A11y announcement
   const textContent = htmlContent.replace(/<[^>]+>/g, ' ').trim();
-  els.a11yLive.textContent = (role === 'ai' ? 'Safe Space: ' : 'You: ') + textContent;
+  els.a11yLive.textContent = (role === 'ai' ? 'Saferena: ' : 'You: ') + textContent;
 
   scrollToBottom();
   return row;
@@ -2457,11 +2503,22 @@ async function revealCuratedMessage(customMessage) {
   await sleep(400);
   scrollToBottom();
 
-  // Enable input
-  enableInput();
+  // Do not re-enable composer if session is already at limit / locked (main init may have
+  // shown the gate while this reveal was still animating).
+  if (STATE.hasPersonalKey) {
+    enableInput();
+  } else if (STATE.isLocked || STATE.msgCount >= STATE.MAX_MSGS) {
+    disableInput();
+    if (!STATE.isLocked) {
+      await sleep(200);
+      showGate();
+    }
+  } else {
+    enableInput();
+  }
 
   // A11y announce
-  els.a11yLive.textContent = 'Safe Space says: ' + lines.filter(l => l).join(' ');
+  els.a11yLive.textContent = 'Saferena says: ' + lines.filter(l => l).join(' ');
 }
 
 /* ─────────────────────────────────────────
@@ -2485,6 +2542,12 @@ function disableInput() {
 ───────────────────────────────────────── */
 async function sendMessage() {
   if (!STATE.inputEnabled || (STATE.isLocked && !STATE.hasPersonalKey)) return;
+  if (!STATE.hasPersonalKey && STATE.msgCount >= STATE.MAX_MSGS) {
+    disableInput();
+    await sleep(200);
+    showGate();
+    return;
+  }
   const text = els.composerInput.value.trim();
   if (!text) return;
 
@@ -2578,6 +2641,7 @@ async function sendMessage() {
 ───────────────────────────────────────── */
 function showGate() {
   if (STATE.hasPersonalKey) return;
+  if (STATE.isLocked) return;
   STATE.isLocked = true;
 
   // Crossfade composer → gate
@@ -2967,6 +3031,7 @@ function enableUnlimitedUI() {
   const usageWrap = document.querySelector('.usage-ring-wrap');
   if (usageWrap) usageWrap.style.display = 'none';
   els.msgCounter.style.display = 'none';
+  if (els.headerQuotaHint) els.headerQuotaHint.style.display = 'none';
   els.progressTrack.style.display = 'none';
   
   // Show unlimited badge
@@ -3158,6 +3223,9 @@ els.breathModal.addEventListener('keydown', e => {
    INIT
 ───────────────────────────────────────── */
 window.addEventListener('ob:complete', async (e) => {
+  if (!STATE.hasPersonalKey) {
+    await syncQuotaFromServer();
+  }
   const msg = e.detail?.openingMessage || "I\'m here for you.";
   STATE.messagesHistory.push({ role: 'assistant', content: msg });
   
@@ -3176,6 +3244,11 @@ window.addEventListener('ob:complete', async (e) => {
 
 async function init() {
   const guestId = getGuestId();
+
+  if (!STATE.hasPersonalKey) {
+    restoreClientQuotaFallback();
+    updateUsageUI();
+  }
 
   // Restore saved note
   try {
@@ -3197,11 +3270,17 @@ async function init() {
         if (!STATE.hasPersonalKey && (data.rate_limit.allowed === false || STATE.msgCount >= STATE.MAX_MSGS)) {
           showGate();
         }
+      } else {
+        restoreClientQuotaFallback();
+        updateUsageUI();
+        if (!STATE.hasPersonalKey && STATE.msgCount >= STATE.MAX_MSGS) {
+          showGate();
+        }
       }
     } else {
       restoreClientQuotaFallback();
       updateUsageUI();
-      if (!STATE.hasPersonalKey && STATE.msgCount >= STATE.MAX_MSGS && STATE.unlockTime && Date.now() < STATE.unlockTime) {
+      if (!STATE.hasPersonalKey && STATE.msgCount >= STATE.MAX_MSGS) {
         showGate();
       }
     }
@@ -3228,6 +3307,11 @@ async function init() {
   populateSheet();
 }
 
+window.addEventListener('pageshow', (ev) => {
+  if (STATE.hasPersonalKey || !ev.persisted) return;
+  syncQuotaFromServer();
+});
+
 // Kick off when DOM is ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
@@ -3244,7 +3328,7 @@ if (document.readyState === 'loading') {
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
       </svg>
-      Safe Space
+      Saferena
     </div>
 
     <!-- Progress (hidden on screen 0 and summary) -->
