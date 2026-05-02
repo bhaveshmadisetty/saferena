@@ -1561,6 +1561,11 @@ body {
       <span>15</span>
     </div>
 
+    <button class="theme-btn" id="apiKeyBtn" aria-label="Set personal OpenRouter API Key" title="API Key Settings">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"></path>
+      </svg>
+    </button>
     <button class="theme-btn" id="themeBtn" aria-label="Toggle light/dark theme" title="Toggle theme">
       <svg id="themeIconDark" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
         <path d="M8 1a7 7 0 1 0 6 10.47A5 5 0 0 1 8 1z" fill="currentColor"/>
@@ -1792,6 +1797,31 @@ body {
   </div>
 </div>
 
+<!-- ═══ API KEY MODAL ═══ -->
+<div class="modal-overlay" id="apiKeyModal" role="dialog" aria-modal="true" aria-labelledby="apiKeyTitle" aria-hidden="true">
+  <div class="modal-card">
+    <button class="modal-close" id="apiKeyModalClose" aria-label="Close API key settings">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+        <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+
+    <h2 class="modal-title" id="apiKeyTitle">Use Your Own API Key</h2>
+    <p class="modal-sub">Enter a valid OpenRouter API key to unlock unlimited messages. Your key is stored locally in your browser.</p>
+
+    <div class="ob-name-wrap" style="margin-top: 1rem;">
+      <input type="password" id="apiKeyValue" class="ob-name-input" placeholder="sk-or-v1-..." autocomplete="off" />
+    </div>
+
+    <div id="apiKeyStatus" style="font-size: 0.85rem; margin-top: 0.5rem; color: var(--ob-warm); display: none;"></div>
+
+    <div style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
+      <button class="breath-btn" id="apiKeySaveBtn" aria-label="Validate and Save Key" style="flex: 1;">Validate & Save</button>
+      <button class="breath-btn" id="apiKeyRemoveBtn" aria-label="Remove Key" style="flex: 1; background: transparent; color: var(--ob-text); border: 1px solid var(--ob-border);">Remove Key</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══ MOBILE BOTTOM SHEET ═══ -->
 <div class="sheet-overlay" id="sheetOverlay" aria-hidden="true"></div>
 
@@ -1816,7 +1846,7 @@ const STATE = {
   onboardingContext: 'breakup',   // 'breakup' | 'anxiety' | 'loneliness' | 'general'
   msgCount:   0,
   messagesHistory: [],
-  MAX_MSGS:   9999,
+  MAX_MSGS:   15,
   isLocked:   false,
   unlockTime: null,
   inputEnabled: false,
@@ -1827,6 +1857,7 @@ const STATE = {
   helplineOpen: false,
   noteSaved: false,
   theme: 'dark',
+  hasPersonalKey: false,
 };
 
 /* ─────────────────────────────────────────
@@ -1959,6 +1990,13 @@ const els = {
   breatheBtn:      $('breatheBtn'),
   helplineBtn:     $('helplineBtn'),
   journalBtn:      $('journalBtn'),
+  apiKeyModal:     $('apiKeyModal'),
+  apiKeyModalClose:$('apiKeyModalClose'),
+  apiKeyBtn:       $('apiKeyBtn'),
+  apiKeyValue:     $('apiKeyValue'),
+  apiKeySaveBtn:   $('apiKeySaveBtn'),
+  apiKeyRemoveBtn: $('apiKeyRemoveBtn'),
+  apiKeyStatus:    $('apiKeyStatus'),
 };
 
 /* ─────────────────────────────────────────
@@ -2254,7 +2292,7 @@ async function sendMessage() {
   updateUsageUI();
 
   // Check limit
-  if (STATE.msgCount >= STATE.MAX_MSGS) {
+  if (!STATE.hasPersonalKey && STATE.msgCount >= STATE.MAX_MSGS) {
     disableInput();
     await sleep(200);
     showGate();
@@ -2268,10 +2306,15 @@ async function sendMessage() {
   let replyLines = ["I am here with you."];
   try {
       const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') && !window.location.port.includes('8080') ? 'http://localhost:8080' : '';
+      const payload = { messages: STATE.messagesHistory, guestId: getGuestId() };
+      if (STATE.hasPersonalKey) {
+        payload.personal_api_key = localStorage.getItem('ss_personal_key');
+      }
+      
       const response = await fetch(API_BASE + '/api/chat', { 
         method:'POST', 
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: STATE.messagesHistory, guestId: getGuestId() }) 
+        body: JSON.stringify(payload) 
       });
       const data = await response.json();
       const reply = data.reply || data.content || "I am here with you.";
@@ -2290,12 +2333,15 @@ async function sendMessage() {
   hideTyping();
   appendMessage('ai', msgLinesToHTML(replyLines));
 
-  // Quota is increased only after a successful AI reply
-  STATE.msgCount++;
-  updateUsageUI();
+  // Quota is increased only after a successful AI reply (if not using personal key)
+  if (!STATE.hasPersonalKey) {
+    STATE.msgCount++;
+    updateUsageUI();
+  }
+  
   enableInput();
 
-  if (STATE.msgCount >= STATE.MAX_MSGS) {
+  if (!STATE.hasPersonalKey && STATE.msgCount >= STATE.MAX_MSGS) {
     disableInput();
     await sleep(300);
     showGate();
@@ -2327,9 +2373,10 @@ function showGate() {
    START COUNTDOWN (24h)
 ───────────────────────────────────────── */
 function startCountdown() {
-  // TODO: In production, sync with actual session reset time from backend
-  const RESET_HOURS = 24;
-  STATE.unlockTime = Date.now() + RESET_HOURS * 60 * 60 * 1000;
+  if (!STATE.unlockTime) {
+    const RESET_HOURS = 24;
+    STATE.unlockTime = Date.now() + RESET_HOURS * 60 * 60 * 1000;
+  }
 
   function tick() {
     const diff = STATE.unlockTime - Date.now();
@@ -2605,6 +2652,144 @@ els.helplineBtn.addEventListener('click', () => {
 els.breatheBtn.addEventListener('click', openBreathingModal);
 
 /* ─────────────────────────────────────────
+   API KEY MODAL & UNLIMITED UI
+───────────────────────────────────────── */
+function openApiKeyModal() {
+  els.apiKeyModal.classList.add('open');
+  els.apiKeyModal.removeAttribute('aria-hidden');
+  document.body.style.overflow = 'hidden';
+  // Load existing key if any
+  try {
+    const saved = localStorage.getItem('ss_personal_key');
+    if (saved) els.apiKeyValue.value = saved;
+  } catch(e) {}
+  els.apiKeyStatus.style.display = 'none';
+}
+
+function closeApiKeyModal() {
+  els.apiKeyModal.classList.remove('open');
+  els.apiKeyModal.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+}
+
+els.apiKeyBtn.addEventListener('click', openApiKeyModal);
+els.apiKeyModalClose.addEventListener('click', closeApiKeyModal);
+els.apiKeyModal.addEventListener('click', e => { if (e.target === els.apiKeyModal) closeApiKeyModal(); });
+
+els.apiKeySaveBtn.addEventListener('click', async () => {
+  const key = els.apiKeyValue.value.trim();
+  if (!key) {
+    els.apiKeyStatus.textContent = 'Please enter a key.';
+    els.apiKeyStatus.style.display = 'block';
+    return;
+  }
+  
+  els.apiKeySaveBtn.textContent = 'Validating...';
+  els.apiKeySaveBtn.disabled = true;
+  els.apiKeyStatus.style.display = 'none';
+  
+  try {
+    const res = await fetch('https://openrouter.ai/api/v1/auth/key', {
+      headers: { Authorization: 'Bearer ' + key }
+    });
+    if (res.ok) {
+      localStorage.setItem('ss_personal_key', key);
+      STATE.hasPersonalKey = true;
+      els.apiKeyStatus.textContent = 'Key verified and saved!';
+      els.apiKeyStatus.style.color = '#4CAF50';
+      els.apiKeyStatus.style.display = 'block';
+      setTimeout(closeApiKeyModal, 1500);
+      enableUnlimitedUI();
+    } else {
+      els.apiKeyStatus.textContent = 'Invalid API key.';
+      els.apiKeyStatus.style.color = 'var(--ob-warm)';
+      els.apiKeyStatus.style.display = 'block';
+    }
+  } catch (e) {
+    els.apiKeyStatus.textContent = 'Error validating key.';
+    els.apiKeyStatus.style.color = 'var(--ob-warm)';
+    els.apiKeyStatus.style.display = 'block';
+  }
+  
+  els.apiKeySaveBtn.textContent = 'Validate & Save';
+  els.apiKeySaveBtn.disabled = false;
+});
+
+els.apiKeyRemoveBtn.addEventListener('click', () => {
+  localStorage.removeItem('ss_personal_key');
+  STATE.hasPersonalKey = false;
+  els.apiKeyValue.value = '';
+  els.apiKeyStatus.textContent = 'Key removed.';
+  els.apiKeyStatus.style.color = 'var(--ob-text)';
+  els.apiKeyStatus.style.display = 'block';
+  disableUnlimitedUI();
+});
+
+function enableUnlimitedUI() {
+  // Hide usage ring and counter
+  const usageWrap = document.querySelector('.usage-ring-wrap');
+  if (usageWrap) usageWrap.style.display = 'none';
+  els.msgCounter.style.display = 'none';
+  els.progressTrack.style.display = 'none';
+  
+  // Show unlimited badge
+  let badge = document.getElementById('unlimitedBadge');
+  if (!badge) {
+    badge = document.createElement('div');
+    badge.id = 'unlimitedBadge';
+    badge.style.fontSize = '0.75rem';
+    badge.style.color = 'var(--ob-primary)';
+    badge.style.border = '1px solid var(--ob-primary)';
+    badge.style.padding = '2px 6px';
+    badge.style.borderRadius = '4px';
+    badge.textContent = 'Unlimited (Using Your OpenRouter Key)';
+    document.querySelector('.header-status').appendChild(badge);
+  }
+  badge.style.display = 'block';
+  const headerStatusSpan = document.querySelector('.header-status > span');
+  if (headerStatusSpan && headerStatusSpan.id !== 'unlimitedBadge') headerStatusSpan.style.display = 'none';
+  
+  // Unlock if locked
+  if (STATE.isLocked) {
+    STATE.isLocked = false;
+    els.gateWrap.classList.remove('visible');
+    setTimeout(() => {
+      els.gateWrap.style.display = 'none';
+      els.composerWrap.style.display = 'flex';
+      els.composerWrap.style.opacity = '1';
+      els.composerWrap.style.pointerEvents = 'auto';
+      enableInput();
+    }, 350);
+  }
+}
+
+function disableUnlimitedUI() {
+  const usageWrap = document.querySelector('.usage-ring-wrap');
+  if (usageWrap) usageWrap.style.display = 'flex';
+  els.msgCounter.style.display = 'flex';
+  els.progressTrack.style.display = 'block';
+  
+  let badge = document.getElementById('unlimitedBadge');
+  if (badge) badge.style.display = 'none';
+  const headerStatusSpan = document.querySelector('.header-status > span');
+  if (headerStatusSpan && headerStatusSpan.id !== 'unlimitedBadge') headerStatusSpan.style.display = 'inline';
+  
+  updateUsageUI();
+  if (STATE.msgCount >= STATE.MAX_MSGS) {
+    showGate();
+  }
+}
+
+// Check key on init
+try {
+  if (localStorage.getItem('ss_personal_key')) {
+    STATE.hasPersonalKey = true;
+    enableUnlimitedUI();
+  }
+} catch(e) {}
+
+
+/* ─────────────────────────────────────────
    GATE BUTTONS
 ───────────────────────────────────────── */
 els.gateNoteBtn.addEventListener('click', () => {
@@ -2731,7 +2916,13 @@ async function init() {
       const data = await statusRes.json();
       if (data.rate_limit) {
         STATE.msgCount = Math.max(0, STATE.MAX_MSGS - data.rate_limit.remaining);
+        if (data.rate_limit.unlock_at) {
+          STATE.unlockTime = new Date(data.rate_limit.unlock_at).getTime();
+        }
         updateUsageUI();
+        if (data.rate_limit.allowed === false || STATE.msgCount >= STATE.MAX_MSGS) {
+          showGate();
+        }
       }
     }
 

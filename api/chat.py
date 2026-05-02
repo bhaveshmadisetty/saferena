@@ -40,6 +40,7 @@ class handler(BaseHTTPRequestHandler):
             messages = payload.get("messages", [])
             session_id = payload.get("sessionId")
             guest_id = payload.get("guestId", "")  # NEW: read guest_id from payload
+            personal_api_key = payload.get("personal_api_key", "")
 
             if not isinstance(messages, list):
                 self._json_response(400, {"error": "'messages' must be an array"})
@@ -92,9 +93,9 @@ class handler(BaseHTTPRequestHandler):
             # Check rate limits before calling the LLM
             is_locked = False
             msg_count = 0
-            # Configurable session limit (default 9999)
-            MAX_MESSAGES = int(os.getenv("MAX_MESSAGES_PER_SESSION", "9999"))
-            if guest_id:
+            # Configurable session limit (default 15)
+            MAX_MESSAGES = int(os.getenv("MAX_MESSAGES_PER_SESSION", "15"))
+            if guest_id and not personal_api_key:
                 try:
                     import user_context as uc
                     ctx = uc.get_context(guest_id)
@@ -126,6 +127,7 @@ class handler(BaseHTTPRequestHandler):
                 session_id=session_id,
                 memory_context=memory_context,  # NEW: pass memory context
                 guest_id=guest_id,              # NEW: pass guest_id for context mapping
+                personal_api_key=personal_api_key,
             )
 
             if not isinstance(reply, str):
@@ -141,11 +143,12 @@ class handler(BaseHTTPRequestHandler):
                     print(f"[memory] Non-fatal save error: {mem_err}")
                 
                 # Increment quota ONLY after successful generation
-                try:
-                    import user_context as uc
-                    uc.increment_msg_count(guest_id)
-                except Exception as uc_err:
-                    print(f"[chat] Failed to increment count: {uc_err}")
+                if not personal_api_key:
+                    try:
+                        import user_context as uc
+                        uc.increment_msg_count(guest_id)
+                    except Exception as uc_err:
+                        print(f"[chat] Failed to increment count: {uc_err}")
             # ---- END MEMORY ----
 
             self._json_response(200, {"reply": reply})

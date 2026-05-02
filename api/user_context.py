@@ -89,7 +89,10 @@ def get_context(guest_id: str) -> dict | None:
 def increment_msg_count(guest_id: str):
     ctx = get_context(guest_id)
     if not ctx:
-        return
+        save_intake_v2(guest_id, {"path": "deep", "q1": "Started chatting directly", "first_name": "Guest"})
+        ctx = get_context(guest_id)
+        if not ctx:
+            return
     
     current_count = ctx.get("session_msg_count", 0)
     new_count = current_count + 1

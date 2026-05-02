@@ -163,6 +163,7 @@ def generate_assistant_reply(
     session_id: str | None = None,
     memory_context: str = "",  # Supabase persistent memory (optional add-on)
     guest_id: str = "",        # User context mapping
+    personal_api_key: str = "",
 ) -> str:
     if not messages:
         return "I am here with you."
@@ -238,7 +239,15 @@ REPLY:
 """
 
     try:
-        response = client.chat.completions.create(
+        # Override client if personal API key is provided
+        active_client = client
+        if personal_api_key:
+            active_client = OpenAI(
+                api_key=personal_api_key,
+                base_url="https://openrouter.ai/api/v1"
+            )
+
+        response = active_client.chat.completions.create(
             # Using qwen3-coder as confirmed by the user
             model="qwen3-coder",
             messages=[{"role": "user", "content": prompt}],

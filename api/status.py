@@ -68,7 +68,7 @@ class handler(BaseHTTPRequestHandler):
             # Normal state
             msg_count = ctx.get("session_msg_count", 0)
             # Configurable limit for status response
-            max_msgs = int(os.getenv("MAX_MESSAGES_PER_SESSION", "9999"))
+            max_msgs = int(os.getenv("MAX_MESSAGES_PER_SESSION", "15"))
             self._json_response(200, {
                 "has_context": True,
                 "rate_limit": {"allowed": True, "remaining": max(0, max_msgs - msg_count)}

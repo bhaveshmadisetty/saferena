@@ -75,7 +75,7 @@ def api_status(guest_id):
                     )
                 except Exception: pass
             # After unlocking, report remaining using configurable max
-    max_msgs = int(os.getenv("MAX_MESSAGES_PER_SESSION", "9999"))
+    max_msgs = int(os.getenv("MAX_MESSAGES_PER_SESSION", "15"))
     return jsonify({"has_context": True, "rate_limit": {"allowed": True, "remaining": max_msgs}})
     
     if ctx.get("is_locked"):
@@ -83,7 +83,7 @@ def api_status(guest_id):
         
     msg_count = ctx.get("session_msg_count", 0)
     # Configurable limit for status response
-    max_msgs = int(os.getenv("MAX_MESSAGES_PER_SESSION", "9999"))
+    max_msgs = int(os.getenv("MAX_MESSAGES_PER_SESSION", "15"))
     return jsonify({"has_context": True, "rate_limit": {"allowed": True, "remaining": max(0, max_msgs - msg_count)}})
 
 @app.route("/api/opening/<guest_id>", methods=["GET", "OPTIONS"])
@@ -119,6 +119,7 @@ def chat():
     messages = payload.get("messages", [])
     session_id = payload.get("sessionId")
     guest_id = payload.get("guestId", "")  # NEW: read guest_id from payload
+    personal_api_key = payload.get("personal_api_key", "")
 
     if not isinstance(messages, list):
         return jsonify({"error": "'messages' must be an array"}), 400
@@ -170,8 +171,8 @@ def chat():
     is_locked = False
     msg_count = 0
     # Configurable session limit (default 15)
-    MAX_MESSAGES = int(os.getenv("MAX_MESSAGES_PER_SESSION", "9999"))
-    if guest_id:
+    MAX_MESSAGES = int(os.getenv("MAX_MESSAGES_PER_SESSION", "15"))
+    if guest_id and not personal_api_key:
         try:
             import api.user_context as uc
             ctx = uc.get_context(guest_id)
@@ -198,6 +199,7 @@ def chat():
             session_id=session_id,
             memory_context=memory_context,  # NEW: pass memory context
             guest_id=guest_id,              # NEW: pass guest_id for context mapping
+            personal_api_key=personal_api_key,
         )
         if not isinstance(reply, str):
             return jsonify({"error": "Pipeline returned non-string reply"}), 500
@@ -211,11 +213,12 @@ def chat():
                     print(f"[memory] Non-fatal save error: {mem_err}")
             
             # Increment quota ONLY after successful generation
-            try:
-                import api.user_context as uc
-                uc.increment_msg_count(guest_id)
-            except Exception as uc_err:
-                print(f"[chat] Failed to increment count: {uc_err}")
+            if not personal_api_key:
+                try:
+                    import api.user_context as uc
+                    uc.increment_msg_count(guest_id)
+                except Exception as uc_err:
+                    print(f"[chat] Failed to increment count: {uc_err}")
         # ---- END MEMORY ----
 
         return jsonify({"reply": reply}), 200
