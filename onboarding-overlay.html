@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Safe Space — Onboarding</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:opsz,wght@9..40,300..700&display=swap" rel="stylesheet">
+
+<style>
+/* ═══════════════════════════════════════════
+   DROP THIS ENTIRE <style> BLOCK INTO YOUR
+   EXISTING CSS FILE (or keep in <head>)
+═══════════════════════════════════════════ */
+
+:root {
+  --ob-bg:        #0e0d0c;
+  --ob-surface:   #151413;
+  --ob-surf2:     #1c1b19;
+  --ob-border:    #2d2b28;
+  --ob-divider:   #222120;
+  --ob-text:      #e4e2de;
+  --ob-muted:     #6e6c69;
+  --ob-faint:     #3a3835;
+  --ob-primary:   #4ba3ae;
+  --ob-pdim:      #162e30;
+  --ob-pglow:     oklch(0.62 0.08 192 / 0.18);
+  --ob-warm:      #c48a5a;
+  --ob-warm-dim:  #2a1c0e;
+  --ob-ease:      cubic-bezier(0.16, 1, 0.3, 1);
+  --ob-font-d:    'Instrument Serif', Georgia, serif;
+  --ob-font-b:    'DM Sans', system-ui, sans-serif;
+}
+[data-theme="light"] {
+  --ob-bg:       #f4f2ee;
+  --ob-surface:  #faf9f6;
+  --ob-surf2:    #ffffff;
+  --ob-border:   #dbd8d3;
+  --ob-divider:  #e8e5e0;
+  --ob-text:     #1c1a17;
+  --ob-muted:    #706e6a;
+  --ob-faint:    #c5c3be;
+  --ob-primary:  #1a7a84;
+  --ob-pdim:     #daeaec;
+  --ob-pglow:    oklch(0.5 0.1 192 / 0.1);
+  --ob-warm:     #9a6535;
+  --ob-warm-dim: #f5e8d8;
+}
+
+/* ─── OVERLAY BACKDROP ───────────────────── */
+#ob-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: var(--ob-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  overflow-y: auto;
+  font-family: var(--ob-font-b);
+  opacity: 1;
+  transition: opacity 500ms var(--ob-ease);
+}
+#ob-overlay.ob-hiding {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Ambient blobs */
+#ob-overlay::before,
+#ob-overlay::after {
+  content: '';
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(100px);
+  pointer-events: none;
+  opacity: 0.05;
+}
+#ob-overlay::before {
+  width: 500px; height: 500px;
+  background: var(--ob-primary);
+  top: -150px; right: -100px;
+}
+#ob-overlay::after {
+  width: 350px; height: 350px;
+  background: var(--ob-warm);
+  bottom: -80px; left: -60px;
+}
+
+/* ─── CARD ───────────────────────────────── */
+.ob-card {
+  width: 100%;
+  max-width: 540px;
+  background: var(--ob-surface);
+  border: 1px solid var(--ob-border);
+  border-radius: 1.5rem;
+  padding: 2.5rem 2rem;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+  position: relative;
+  z-index: 1;
+}
+
+/* ─── LOGO ───────────────────────────────── */
+.ob-logo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--ob-font-d);
+  font-size: 1rem;
+  color: var(--ob-text);
+  margin-bottom: 2rem;
+}
+.ob-logo svg { color: var(--ob-primary); }
+
+/* ─── PROGRESS ───────────────────────────── */
+.ob-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+}
+.ob-progress-track {
+  flex: 1;
+  height: 3px;
+  background: var(--ob-faint);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.ob-progress-fill {
+  height: 100%;
+  background: var(--ob-primary);
+  border-radius: 99px;
+  transition: width 450ms var(--ob-ease);
+}
+.ob-progress-label {
+  font-size: 0.75rem;
+  color: var(--ob-muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── SCREENS (show/hide) ────────────────── */
+.ob-screen { display: none; }
+.ob-screen.ob-active {
+  display: block;
+  animation: obFadeUp 380ms var(--ob-ease) both;
+}
+@keyframes obFadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── HEADINGS ───────────────────────────── */
+.ob-eyebrow {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ob-primary);
+  margin-bottom: 0.5rem;
+}
+.ob-heading {
+  font-family: var(--ob-font-d);
+  font-size: clamp(1.25rem, 4vw, 1.7rem);
+  line-height: 1.2;
+  color: var(--ob-text);
+  margin-bottom: 0.5rem;
+}
+.ob-sub {
+  font-size: 0.875rem;
+  color: var(--ob-muted);
+  line-height: 1.55;
+  margin-bottom: 1.5rem;
+  max-width: 55ch;
+}
+
+/* ─── PATH CARDS (screen 0) ──────────────── */
+.ob-path-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+.ob-path-card {
+  border: 1px solid var(--ob-border);
+  border-radius: 1rem;
+  padding: 1.25rem 1rem;
+  text-align: center;
+  cursor: pointer;
+  background: var(--ob-surf2);
+  transition:
+    border-color 180ms var(--ob-ease),
+    background   180ms var(--ob-ease),
+    transform    120ms var(--ob-ease),
+    box-shadow   180ms var(--ob-ease);
+}
+.ob-path-card:hover {
+  border-color: var(--ob-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px var(--ob-pglow);
+}
+.ob-path-emoji { font-size: 2rem; margin-bottom: 0.5rem; }
+.ob-path-label {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--ob-text);
+  margin-bottom: 0.25rem;
+}
+.ob-path-desc {
+  font-size: 0.75rem;
+  color: var(--ob-muted);
+  line-height: 1.45;
+}
+.ob-anon-note {
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--ob-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.ob-anon-note span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+}
+
+/* ─── OPTION CARDS (large) ───────────────── */
+.ob-opt-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+.ob-opt-card {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--ob-border);
+  border-radius: 0.875rem;
+  background: var(--ob-surf2);
+  color: var(--ob-muted);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 160ms var(--ob-ease),
+    background   160ms var(--ob-ease),
+    color        160ms var(--ob-ease),
+    transform    100ms var(--ob-ease);
+}
+.ob-opt-card:hover {
+  border-color: var(--ob-primary);
+  color: var(--ob-text);
+  transform: translateX(3px);
+}
+.ob-opt-card.ob-sel {
+  border-color: var(--ob-primary);
+  background: var(--ob-pdim);
+  color: var(--ob-primary);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px var(--ob-primary);
+}
+.ob-opt-emoji { font-size: 1.1rem; flex-shrink: 0; line-height: 1; }
+.ob-opt-body { flex: 1; }
+.ob-opt-label { font-weight: inherit; }
+.ob-opt-sub {
+  font-size: 0.7rem;
+  color: var(--ob-muted);
+  margin-top: 2px;
+}
+.ob-opt-card.ob-sel .ob-opt-sub { color: var(--ob-primary); opacity: 0.7; }
+
+/* ─── OPTION PILLS (compact) ─────────────── */
+.ob-pill-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+.ob-pill {
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--ob-border);
+  border-radius: 99px;
+  background: var(--ob-surf2);
+  color: var(--ob-muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 160ms var(--ob-ease);
+}
+.ob-pill:hover { border-color: var(--ob-primary); color: var(--ob-text); }
+.ob-pill.ob-sel {
+  border-color: var(--ob-primary);
+  background: var(--ob-pdim);
+  color: var(--ob-primary);
+  font-weight: 600;
+  box-shadow: 0 0 0 1px var(--ob-primary);
+}
+.ob-pill.ob-multi.ob-sel::before { content: '✓ '; font-size: 0.7em; }
+
+/* ─── TEXTAREA ───────────────────────────── */
+.ob-ta-wrap { position: relative; margin-bottom: 1.5rem; }
+.ob-textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 0.875rem 1rem;
+  background: var(--ob-surf2);
+  border: 1px solid var(--ob-border);
+  border-radius: 0.875rem;
+  color: var(--ob-text);
+  font-family: var(--ob-font-b);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  resize: none;
+  outline: none;
+  transition: border-color 200ms var(--ob-ease), box-shadow 200ms var(--ob-ease);
+}
+.ob-textarea::placeholder { color: var(--ob-faint); }
+.ob-textarea:focus {
+  border-color: var(--ob-primary);
+  box-shadow: 0 0 0 3px var(--ob-pglow);
+}
+.ob-skip-btn {
+  position: absolute;
+  bottom: 0.625rem;
+  right: 0.625rem;
+  font-family: var(--ob-font-b);
+  font-size: 0.7rem;
+  color: var(--ob-muted);
+  padding: 0.2rem 0.625rem;
+  border-radius: 99px;
+  border: 1px solid var(--ob-border);
+  background: var(--ob-surface);
+  cursor: pointer;
+  transition: color 140ms, background 140ms;
+}
+.ob-skip-btn:hover { color: var(--ob-text); background: var(--ob-surf2); }
+
+/* ─── BUTTONS ────────────────────────────── */
+.ob-btn-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+.ob-btn-next {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.5rem;
+  border-radius: 99px;
+  background: var(--ob-primary);
+  color: #081516;
+  font-family: var(--ob-font-b);
+  font-size: 0.875rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  transition: background 160ms, transform 100ms, box-shadow 160ms;
+}
+.ob-btn-next:hover { background: #5fb8c4; transform: translateY(-1px); box-shadow: 0 6px 20px var(--ob-pglow); }
+.ob-btn-next:active { transform: translateY(0); }
+.ob-btn-next:disabled { opacity: 0.3; cursor: not-allowed; transform: none; box-shadow: none; }
+.ob-btn-next svg { width: 14px; height: 14px; }
+
+.ob-btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: var(--ob-font-b);
+  font-size: 0.8125rem;
+  color: var(--ob-muted);
+  padding: 0.5rem 0.75rem;
+  border-radius: 99px;
+  border: none;
+  cursor: pointer;
+  transition: color 140ms;
+  background: none;
+}
+.ob-btn-back:hover { color: var(--ob-text); }
+.ob-btn-back svg { width: 13px; height: 13px; }
+
+/* ─── SUMMARY ────────────────────────────── */
+.ob-summary-list {
+  background: var(--ob-surf2);
+  border: 1px solid var(--ob-border);
+  border-radius: 1rem;
+  overflow: hidden;
+  margin-bottom: 1.25rem;
+}
+.ob-summary-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--ob-divider);
+  font-size: 0.8125rem;
+}
+.ob-summary-row:last-child { border-bottom: none; }
+.ob-s-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ob-muted);
+  min-width: 76px;
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+.ob-s-val {
+  color: var(--ob-text);
+  font-weight: 500;
+  line-height: 1.5;
+  flex: 1;
+}
+.ob-s-val em { color: var(--ob-muted); font-style: italic; font-weight: 400; }
+
+.ob-begin-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  border-radius: 99px;
+  background: var(--ob-primary);
+  color: #081516;
+  font-family: var(--ob-font-b);
+  font-size: 0.9375rem;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 20px var(--ob-pglow);
+  transition: background 160ms, transform 120ms, box-shadow 160ms;
+  position: relative;
+  overflow: hidden;
+}
+.ob-begin-btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 55%);
+  pointer-events: none;
+}
+.ob-begin-btn:hover { background: #5fb8c4; transform: translateY(-1px); box-shadow: 0 8px 28px var(--ob-pglow); }
+.ob-begin-btn svg { width: 18px; height: 18px; }
+
+.ob-footer-note {
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--ob-muted);
+  margin-top: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+/* ─── MOBILE ─────────────────────────────── */
+@media (max-width: 520px) {
+  .ob-card { padding: 1.75rem 1.25rem; border-radius: 1.25rem; }
+  .ob-path-grid { grid-template-columns: 1fr 1fr; }
+  .ob-path-card { padding: 1rem 0.75rem; }
+}
+@media (max-width: 360px) {
+  .ob-path-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body style="background:#0e0d0c;min-height:100dvh;">
+
+<!--
+  ═══════════════════════════════════════════════════════
+  DROP THIS ENTIRE #ob-overlay DIV INTO YOUR index.html
+  (right before closing </body> tag)
+  ═══════════════════════════════════════════════════════
+-->
+<div id="ob-overlay">
+  <div class="ob-card">
+
+    <!-- Logo -->
+    <div class="ob-logo">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+      </svg>
+      Safe Space
+    </div>
+
+    <!-- Progress (hidden on screen 0 and summary) -->
+    <div class="ob-progress" id="ob-progress" style="display:none">
+      <div class="ob-progress-track">
+        <div class="ob-progress-fill" id="ob-pfill" style="width:0%"></div>
+      </div>
+      <div class="ob-progress-label" id="ob-plabel"></div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         SCREEN 0: PATH CHOOSER
+    ══════════════════════════════════ -->
+    <div class="ob-screen ob-active" id="ob-s0">
+      <div class="ob-heading" style="font-size:clamp(1.4rem,4vw,2rem);margin-bottom:0.5rem">
+        What brings you here today?
+      </div>
+      <p class="ob-sub">This helps me show up the right way for you. Pick whichever feels closer.</p>
+
+      <div class="ob-path-grid">
+        <button class="ob-path-card" onclick="choosePath('deep')">
+          <div class="ob-path-emoji">💔</div>
+          <div class="ob-path-label">Something's hurting</div>
+          <div class="ob-path-desc">Breakup, grief, heartbreak, loneliness, anxiety, feeling lost</div>
+        </button>
+        <button class="ob-path-card" onclick="choosePath('general')">
+          <div class="ob-path-emoji">💬</div>
+          <div class="ob-path-label">Just need to talk</div>
+          <div class="ob-path-desc">Venting, clarity, everyday stress, or just want to think out loud</div>
+        </button>
+      </div>
+
+      <div class="ob-anon-note">
+        <span>🔒 Anonymous</span>
+        <span>· No login needed</span>
+        <span>· Auto-deleted in 7 days</span>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         DEEP PATH — Q1: What's going on
+    ══════════════════════════════════ -->
+    <div class="ob-screen" id="ob-d1">
+      <div class="ob-eyebrow">Check in · 1 of 4</div>
+      <div class="ob-heading">What's been weighing on you?</div>
+      <p class="ob-sub">Pick the one that fits most right now.</p>
+      <div class="ob-opt-list">
+        <button class="ob-opt-card" data-q="d1" data-val="going through a breakup or the end of a relationship">
+          <span class="ob-opt-emoji">💔</span>
+          <div class="ob-opt-body">
+            <div class="ob-opt-label">Breakup or relationship ending</div>
+            <div class="ob-opt-sub">Loss of someone I loved, or still love</div>
+          </div>
+        </button>
+        <button class="ob-opt-card" data-q="d1" data-val="feeling lost or without direction — no clear sense of who I am or where I'm going">
+          <span class="ob-opt-emoji">🌫️</span>
+          <div class="ob-opt-body">
+            <div class="ob-opt-label">Feeling lost or without direction</div>
+            <div class="ob-opt-sub">Can't see the path forward, or unsure who I am right now</div>
+          </div>
+        </button>
+        <button class="ob-opt-card" data-q="d1" data-val="experiencing anxiety, overthinking, or stress that won't go away">
+          <span class="ob-opt-emoji">🌀</span>
+          <div class="ob-opt-body">
+            <div class="ob-opt-label">Anxiety or constant overthinking</div>
+            <div class="ob-opt-sub">Mind won't stop, stuck in a loop I can't escape</div>
+          </div>
+        </button>
+        <button class="ob-opt-card" data-q="d1" data-val="deep loneliness — feeling fundamentally disconnected from people">
+          <span class="ob-opt-emoji">🪟</span>
+          <div class="ob-opt-body">
+            <div class="ob-opt-label">Loneliness or disconnection</div>
+            <div class="ob-opt-sub">Even around others, I feel invisible or unseen</div>
+          </div>
+        </button>
+        <button class="ob-opt-card" data-q="d1" data-val="pressure from academics, family, or career expectations that feels overwhelming">
+          <span class="ob-opt-emoji">⚖️</span>
+          <div class="ob-opt-body">
+            <div class="ob-opt-label">Pressure or expectations crushing me</div>
+            <div class="ob-opt-sub">Exams, family, career — all feels like too much</div>
+          </div>
+        </button>
+        <button class="ob-opt-card" data-q="d1" data-val="something personal that's hard to name or categorize">
+          <span class="ob-opt-emoji">🌊</span>
+          <div class="ob-opt-body">
+            <div class="ob-opt-label">Something I can't quite name</div>
+            <div class="ob-opt-sub">Just feels heavy — I'll explain more in the chat</div>
+          </div>
+        </button>
+      </div>
+      <div class="ob-btn-row">
+        <button class="ob-btn-back" onclick="goTo('ob-s0', null, null)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg> Back
+        </button>
+        <button class="ob-btn-next" id="ob-dn1" disabled onclick="goTo('ob-d2', 'd1', 'd2')">
+          Continue <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         DEEP PATH — Q2: Duration
+    ══════════════════════════════════ -->
+    <div class="ob-screen" id="ob-d2">
+      <div class="ob-eyebrow">Check in · 2 of 4</div>
+      <div class="ob-heading">How long has this been part of your life?</div>
+      <p class="ob-sub">Duration shapes everything — a fresh wound is different from one carried for years.</p>
+      <div class="ob-pill-wrap">
+        <button class="ob-pill" data-q="d2" data-val="this just happened — within the last few days">⚡ Just happened</button>
+        <button class="ob-pill" data-q="d2" data-val="this has been going on for a few weeks">A few weeks</button>
+        <button class="ob-pill" data-q="d2" data-val="this has been weighing on me for several months">A few months</button>
+        <button class="ob-pill" data-q="d2" data-val="this has been part of my life for over a year">Over a year</button>
+        <button class="ob-pill" data-q="d2" data-val="honestly, it feels like forever — I can't remember feeling different">Feels like forever</button>
+      </div>
+      <div class="ob-btn-row">
+        <button class="ob-btn-back" onclick="goTo('ob-d1', null, 'd1')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg> Back
+        </button>
+        <button class="ob-btn-next" id="ob-dn2" disabled onclick="goTo('ob-d3', 'd2', 'd3')">
+          Continue <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         DEEP PATH — Q3: Root cause (Dr. K)
+    ══════════════════════════════════ -->
+    <div class="ob-screen" id="ob-d3">
+      <div class="ob-eyebrow">Check in · 3 of 4</div>
+      <div class="ob-heading">What do you think is really going on underneath all of this?</div>
+      <p class="ob-sub">This is the most important question. Don't edit yourself. Even "I have no idea" is the right answer.</p>
+      <div class="ob-ta-wrap">
+        <textarea class="ob-textarea" id="ob-d3-txt" placeholder="Write whatever comes first — even if it doesn't make sense yet..." rows="4"></textarea>
+        <button class="ob-skip-btn" onclick="skipD3()">Not sure yet →</button>
+      </div>
+      <div class="ob-btn-row">
+        <button class="ob-btn-back" onclick="goTo('ob-d2', null, 'd2')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg> Back
+        </button>
+        <button class="ob-btn-next" onclick="advanceD3()">
+          Continue <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         DEEP PATH — Q4: Support style
+    ══════════════════════════════════ -->
+    <div class="ob-screen" id="ob-d4">
+      <div class="ob-eyebrow">Check in · 4 of 4</div>
+      <div class="ob-heading">What kind of support do you need right now?</div>
+      <p class="ob-sub">This changes how I'll talk to you. You can always shift during the chat.</p>
+      <div class="ob-opt-list">
+        <button class="ob-opt-card" data-q="d4" data-val="just listen — I need to feel heard, not fixed or advised">
+          <span class="ob-opt-emoji">👂</span>
+          <div class="ob-opt-body">
+            <div class="ob-opt-label">Just listen. Don't fix anything.</div>
+            <div class="ob-opt-sub">I need to feel heard, not solved</div>
+          </div>
+        </button>
+        <button class="ob-opt-card" data-q="d4" data-val="help me understand why I feel this way — I want insight and clarity">
+          <span class="ob-opt-emoji">🔍</span>
+          <div class="ob-opt-body">
+            <div class="ob-opt-label">Help me understand why I feel this way</div>
+            <div class="ob-opt-sub">I want insight, not just comfort</div>
+          </div>
+        </button>
+        <button class="ob-opt-card" data-q="d4" data-val="be honest and direct with me, even if it's hard to hear">
+          <span class="ob-opt-emoji">🪞</span>
+          <div class="ob-opt-body">
+            <div class="ob-opt-label">Be honest, even if it's hard to hear</div>
+            <div class="ob-opt-sub">I can handle directness — I need real perspective</div>
+          </div>
+        </button>
+        <button class="ob-opt-card" data-q="d4" data-val="help me figure out what to do next — I need a path forward">
+          <span class="ob-opt-emoji">🧭</span>
+          <div class="ob-opt-body">
+            <div class="ob-opt-label">Help me figure out what to do next</div>
+            <div class="ob-opt-sub">I need direction, not just processing</div>
+          </div>
+        </button>
+      </div>
+      <div class="ob-btn-row">
+        <button class="ob-btn-back" onclick="goTo('ob-d3', null, 'd3')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg> Back
+        </button>
+        <button class="ob-btn-next" id="ob-dn4" disabled onclick="showSummary('deep')">
+          See summary <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         GENERAL PATH — G1: What's on mind
+    ══════════════════════════════════ -->
+    <div class="ob-screen" id="ob-g1">
+      <div class="ob-eyebrow">Quick check in · 1 of 3</div>
+      <div class="ob-heading">What's on your mind?</div>
+      <p class="ob-sub">Pick what fits most. No wrong answer.</p>
+      <div class="ob-opt-list">
+        <button class="ob-opt-card" data-q="g1" data-val="stressed or overwhelmed with work, studies, or daily life">
+          <span class="ob-opt-emoji">🌋</span>
+          <div class="ob-opt-body">
+            <div class="ob-opt-label">Stressed or overwhelmed</div>
+            <div class="ob-opt-sub">Work, studies, or just too much going on</div>
+          </div>
+        </button>
+        <button class="ob-opt-card" data-q="g1" data-val="need to vent about something specific that happened recently">
+          <span class="ob-opt-emoji">💨</span>
+          <div class="ob-opt-body">
+            <div class="ob-opt-label">Need to vent about something</div>
+            <div class="ob-opt-sub">Something specific happened and I need to let it out</div>
+          </div>
+        </button>
+        <button class="ob-opt-card" data-q="g1" data-val="feeling unsure about a decision or life situation and need clarity">
+          <span class="ob-opt-emoji">🤔</span>
+          <div class="ob-opt-body">
+            <div class="ob-opt-label">Stuck on a decision or situation</div>
+            <div class="ob-opt-sub">Need to think it through out loud</div>
+          </div>
+        </button>
+        <button class="ob-opt-card" data-q="g1" data-val="bored or going through a low mood and want to talk to someone">
+          <span class="ob-opt-emoji">😶</span>
+          <div class="ob-opt-body">
+            <div class="ob-opt-label">Low mood or just bored</div>
+            <div class="ob-opt-sub">Not anything serious — just want company</div>
+          </div>
+        </button>
+        <button class="ob-opt-card" data-q="g1" data-val="exploring thoughts and want a non-judgmental space to think freely">
+          <span class="ob-opt-emoji">🌱</span>
+          <div class="ob-opt-body">
+            <div class="ob-opt-label">Just thinking out loud</div>
+            <div class="ob-opt-sub">No specific problem — want a space to explore ideas or feelings</div>
+          </div>
+        </button>
+      </div>
+      <div class="ob-btn-row">
+        <button class="ob-btn-back" onclick="goTo('ob-s0', null, null)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg> Back
+        </button>
+        <button class="ob-btn-next" id="ob-gn1" disabled onclick="goTo('ob-g2', 'g1', 'g2')">
+          Continue <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         GENERAL PATH — G2: Current mood
+    ══════════════════════════════════ -->
+    <div class="ob-screen" id="ob-g2">
+      <div class="ob-eyebrow">Quick check in · 2 of 3</div>
+      <div class="ob-heading">How are you feeling right now?</div>
+      <p class="ob-sub">Just a rough sense is enough.</p>
+      <div class="ob-pill-wrap">
+        <button class="ob-pill" data-q="g2" data-val="good, just need to talk something through">😌 Pretty good</button>
+        <button class="ob-pill" data-q="g2" data-val="meh — somewhere in the middle, not great not bad">😶 Meh</button>
+        <button class="ob-pill" data-q="g2" data-val="a bit stressed or irritated today">😤 Stressed</button>
+        <button class="ob-pill" data-q="g2" data-val="low energy, a bit down today">😔 A bit down</button>
+        <button class="ob-pill" data-q="g2" data-val="honestly not sure — hard to describe">🤷 Hard to say</button>
+      </div>
+      <div class="ob-btn-row">
+        <button class="ob-btn-back" onclick="goTo('ob-g1', null, 'g1')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg> Back
+        </button>
+        <button class="ob-btn-next" id="ob-gn2" disabled onclick="goTo('ob-g3', 'g2', 'g3')">
+          Continue <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         GENERAL PATH — G3: Tone preference
+    ══════════════════════════════════ -->
+    <div class="ob-screen" id="ob-g3">
+      <div class="ob-eyebrow">Quick check in · 3 of 3</div>
+      <div class="ob-heading">How do you want me to show up?</div>
+      <p class="ob-sub">Pick a vibe.</p>
+      <div class="ob-pill-wrap">
+        <button class="ob-pill" data-q="g3" data-val="just listen and validate — keep it warm and supportive">🤗 Warm and supportive</button>
+        <button class="ob-pill" data-q="g3" data-val="be a thinking partner — help me reason through things">🧠 Thinking partner</button>
+        <button class="ob-pill" data-q="g3" data-val="be casual and light — like talking to a friend">😄 Casual, like a friend</button>
+        <button class="ob-pill" data-q="g3" data-val="be honest and direct — don't sugarcoat">🎯 Honest and direct</button>
+      </div>
+      <div class="ob-btn-row">
+        <button class="ob-btn-back" onclick="goTo('ob-g2', null, 'g2')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg> Back
+        </button>
+        <button class="ob-btn-next" id="ob-gn3" disabled onclick="showSummary('general')">
+          See summary <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- ══════════════════════════════════
+         SUMMARY SCREEN
+    ══════════════════════════════════ -->
+    <div class="ob-screen" id="ob-summary">
+      <div style="text-align:center;margin-bottom:1.5rem">
+        <div style="width:52px;height:52px;border-radius:50%;background:var(--ob-pdim);border:1px solid var(--ob-primary);display:flex;align-items:center;justify-content:center;margin:0 auto 0.875rem;font-size:1.4rem">🤝</div>
+        <div class="ob-heading" style="margin-bottom:0.25rem">Here's what I'll carry into our chat</div>
+        <p style="font-size:0.8rem;color:var(--ob-muted);max-width:46ch;margin:0 auto">Go back to change anything, or begin when you're ready.</p>
+      </div>
+      <div class="ob-summary-list" id="ob-summary-rows"></div>
+      <button class="ob-begin-btn" onclick="beginSession()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Begin my session
+      </button>
+      <div class="ob-footer-note">
+        <span>🔒 Anonymous</span>
+        <span>· No login needed</span>
+        <span>· Data deleted in 7 days</span>
+      </div>
+    </div>
+
+  </div><!-- /ob-card -->
+</div><!-- /ob-overlay -->
+
+<!-- ═══════════════════════════════════════════
+     DROP THIS ENTIRE <script> INTO YOUR
+     EXISTING JS OR BEFORE </body>
+═══════════════════════════════════════════ -->
+<script>
+(function() {
+  // ─── helpers ───────────────────────────────
+  function getGuestId() {
+    let id = document.cookie.split('; ').find(r => r.startsWith('guest_id='))?.split('=')[1];
+    if (!id) {
+      id = crypto.randomUUID();
+      const exp = new Date(Date.now() + 7 * 864e5).toUTCString();
+      document.cookie = `guest_id=${id}; expires=${exp}; path=/; SameSite=Lax`;
+    }
+    return id;
+  }
+
+  // ─── check if user already has context ─────
+  // If they do, skip onboarding entirely
+  async function init() {
+    try {
+      const res = await fetch('/api/status/' + getGuestId());
+      const data = await res.json();
+      if (data.has_context) {
+        hideOverlay(); // returning user — skip to chat
+        return;
+      }
+    } catch(e) {
+      // if API fails, still show onboarding
+    }
+    // Show onboarding
+    document.getElementById('ob-overlay').style.display = 'flex';
+  }
+  init();
+
+  // ─── state ─────────────────────────────────
+  const answers = {};
+  let currentPath = null; // 'deep' or 'general'
+
+  // progress map for each screen
+  const progressMap = {
+    'd1': { pct: 25,  label: '1 of 4', total: 4 },
+    'd2': { pct: 50,  label: '2 of 4', total: 4 },
+    'd3': { pct: 75,  label: '3 of 4', total: 4 },
+    'd4': { pct: 100, label: '4 of 4', total: 4 },
+    'g1': { pct: 33,  label: '1 of 3', total: 3 },
+    'g2': { pct: 66,  label: '2 of 3', total: 3 },
+    'g3': { pct: 100, label: '3 of 3', total: 3 },
+  };
+
+  // ─── path choice ───────────────────────────
+  window.choosePath = function(path) {
+    currentPath = path;
+    const nextId = path === 'deep' ? 'ob-d1' : 'ob-g1';
+    const qKey   = path === 'deep' ? 'd1' : 'g1';
+    goTo(nextId, null, qKey);
+  };
+
+  // ─── screen transitions ────────────────────
+  window.goTo = function(screenId, fromQ, toQ) {
+    document.querySelectorAll('.ob-screen').forEach(s => s.classList.remove('ob-active'));
+    const next = document.getElementById(screenId);
+    if (next) next.classList.add('ob-active');
+
+    const prog = document.getElementById('ob-progress');
+    if (toQ && progressMap[toQ]) {
+      prog.style.display = 'flex';
+      document.getElementById('ob-pfill').style.width = progressMap[toQ].pct + '%';
+      document.getElementById('ob-plabel').textContent = progressMap[toQ].label;
+    } else {
+      prog.style.display = 'none';
+    }
+  };
+
+  // ─── option selection ──────────────────────
+  document.querySelectorAll('.ob-opt-card[data-q]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const q = btn.dataset.q;
+      document.querySelectorAll(`.ob-opt-card[data-q="${q}"]`).forEach(b => b.classList.remove('ob-sel'));
+      btn.classList.add('ob-sel');
+      answers[q] = btn.dataset.val;
+      // enable next button
+      const nextMap = { d1:'ob-dn1', d2:'ob-dn2', d4:'ob-dn4', g1:'ob-gn1' };
+      if (nextMap[q]) document.getElementById(nextMap[q]).disabled = false;
+    });
+  });
+
+  document.querySelectorAll('.ob-pill[data-q]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const q = btn.dataset.q;
+      document.querySelectorAll(`.ob-pill[data-q="${q}"]`).forEach(b => b.classList.remove('ob-sel'));
+      btn.classList.add('ob-sel');
+      answers[q] = btn.dataset.val;
+      const nextMap = { d2:'ob-dn2', g2:'ob-gn2', g3:'ob-gn3' };
+      if (nextMap[q]) document.getElementById(nextMap[q]).disabled = false;
+    });
+  });
+
+  // ─── D3 (free text) ────────────────────────
+  window.skipD3 = function() {
+    answers['d3'] = "Not sure yet — will explore in the session.";
+    goTo('ob-d4', 'd3', 'd4');
+  };
+  window.advanceD3 = function() {
+    const txt = document.getElementById('ob-d3-txt').value.trim();
+    answers['d3'] = txt || "Not sure yet — will explore in the session.";
+    goTo('ob-d4', 'd3', 'd4');
+  };
+
+  // ─── summary ──────────────────────────────
+  const shortLabels = {
+    // deep q1
+    'going through a breakup or the end of a relationship': 'Breakup / relationship loss',
+    'feeling lost or without direction — no clear sense of who I am or where I\'m going': 'Feeling lost / directionless',
+    'experiencing anxiety, overthinking, or stress that won\'t go away': 'Anxiety / overthinking',
+    'deep loneliness — feeling fundamentally disconnected from people': 'Loneliness / disconnection',
+    'pressure from academics, family, or career expectations that feels overwhelming': 'Pressure / expectations',
+    'something personal that\'s hard to name or categorize': 'Something hard to name',
+    // deep q2
+    'this just happened — within the last few days': 'Just happened',
+    'this has been going on for a few weeks': 'A few weeks',
+    'this has been weighing on me for several months': 'A few months',
+    'this has been part of my life for over a year': 'Over a year',
+    'honestly, it feels like forever — I can\'t remember feeling different': 'Feels like forever',
+    // deep q4
+    'just listen — I need to feel heard, not fixed or advised': 'Just be heard',
+    'help me understand why I feel this way — I want insight and clarity': 'Insight & understanding',
+    'be honest and direct with me, even if it\'s hard to hear': 'Honest perspective',
+    'help me figure out what to do next — I need a path forward': 'Path forward',
+    // general q1
+    'stressed or overwhelmed with work, studies, or daily life': 'Stress / overwhelm',
+    'need to vent about something specific that happened recently': 'Need to vent',
+    'feeling unsure about a decision or life situation and need clarity': 'Decision / clarity',
+    'bored or going through a low mood and want to talk to someone': 'Low mood / bored',
+    'exploring thoughts and want a non-judgmental space to think freely': 'Thinking out loud',
+    // general q2
+    'good, just need to talk something through': 'Pretty good',
+    'meh — somewhere in the middle, not great not bad': 'Meh',
+    'a bit stressed or irritated today': 'Stressed today',
+    'low energy, a bit down today': 'A bit down',
+    'honestly not sure — hard to describe': 'Hard to say',
+    // general q3
+    'just listen and validate — keep it warm and supportive': 'Warm & supportive',
+    'be a thinking partner — help me reason through things': 'Thinking partner',
+    'be casual and light — like talking to a friend': 'Casual / friendly',
+    'be honest and direct — don\'t sugarcoat': 'Honest & direct',
+  };
+
+  function shorten(val) { return shortLabels[val] || val; }
+
+  window.showSummary = function(path) {
+    const rows = document.getElementById('ob-summary-rows');
+    rows.innerHTML = '';
+
+    let summaryData = [];
+    if (path === 'deep') {
+      summaryData = [
+        { label: 'What\'s going on', val: answers['d1'] },
+        { label: 'How long', val: answers['d2'] },
+        { label: 'Root cause', val: answers['d3'] },
+        { label: 'Need', val: answers['d4'] },
+      ];
+    } else {
+      summaryData = [
+        { label: 'On your mind', val: answers['g1'] },
+        { label: 'Mood today', val: answers['g2'] },
+        { label: 'Tone', val: answers['g3'] },
+      ];
+    }
+
+    summaryData.forEach(item => {
+      const row = document.createElement('div');
+      row.className = 'ob-summary-row';
+      const isRootCause = item.label === 'Root cause';
+      const displayVal = isRootCause && item.val && item.val.length > 100
+        ? '"' + item.val.slice(0,100) + '…"'
+        : (isRootCause && item.val ? '"' + item.val + '"' : shorten(item.val || ''));
+
+      const isSkipped = item.val === 'Not sure yet — will explore in the session.';
+      row.innerHTML = `
+        <span class="ob-s-label">${item.label}</span>
+        <span class="ob-s-val">${isSkipped ? '<em>Not sure yet</em>' : displayVal}</span>
+      `;
+      rows.appendChild(row);
+    });
+
+    // show path type
+    const pathRow = document.createElement('div');
+    pathRow.className = 'ob-summary-row';
+    pathRow.innerHTML = `<span class="ob-s-label">Session type</span><span class="ob-s-val">${path === 'deep' ? '💔 Deep emotional support' : '💬 General conversation'}</span>`;
+    rows.appendChild(pathRow);
+
+    goTo('ob-summary', null, null);
+  };
+
+  // ─── begin session ─────────────────────────
+  window.beginSession = async function() {
+    const guestId = getGuestId();
+    const path = currentPath;
+
+    // Build payload for /api/intake
+    let payload;
+    if (path === 'deep') {
+      payload = {
+        guest_id: guestId,
+        path: 'deep',
+        q1: answers['d1'] || '',
+        q2: answers['d2'] || '',
+        q3: answers['d3'] || '',
+        q4: [],    // deep path has no multi-select (simplified)
+        q5: answers['d4'] || '',
+      };
+    } else {
+      payload = {
+        guest_id: guestId,
+        path: 'general',
+        q1: answers['g1'] || '',
+        q2: answers['g2'] || '',
+        q3: '',
+        q4: [],
+        q5: answers['g3'] || '',
+      };
+    }
+
+    // Fire and forget — don't block the UX
+    fetch('/api/intake', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    }).catch(() => {});
+
+    // Store in sessionStorage as fallback for immediate use
+    sessionStorage.setItem('ob_context', JSON.stringify(payload));
+
+    hideOverlay();
+
+    // Dispatch custom event so your existing chat.js can listen
+    window.dispatchEvent(new CustomEvent('ob:complete', { detail: payload }));
+  };
+
+  function hideOverlay() {
+    const overlay = document.getElementById('ob-overlay');
+    if (!overlay) return;
+    overlay.classList.add('ob-hiding');
+    setTimeout(() => {
+      overlay.style.display = 'none';
+      overlay.remove();
+    }, 500);
+  }
+
+})(); // end IIFE
+</script>
+
+</body>
+</html>
