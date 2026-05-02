@@ -2915,6 +2915,9 @@ async function init() {
     if (statusRes.ok) {
       const data = await statusRes.json();
       if (data.rate_limit) {
+        if (data.rate_limit.max_messages) {
+          STATE.MAX_MSGS = data.rate_limit.max_messages;
+        }
         STATE.msgCount = Math.max(0, STATE.MAX_MSGS - data.rate_limit.remaining);
         if (data.rate_limit.unlock_at) {
           STATE.unlockTime = new Date(data.rate_limit.unlock_at).getTime();

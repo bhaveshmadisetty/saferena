@@ -32,36 +32,40 @@ class handler(BaseHTTPRequestHandler):
             ctx = uc.get_context(guest_id)
             
             if not ctx:
-                self._json_response(200, {"has_context": False})
+                max_msgs = int(os.getenv("MAX_MESSAGES_PER_SESSION", "15"))
+                self._json_response(200, {
+                    "has_context": False,
+                    "rate_limit": {
+                        "allowed": True, 
+                        "remaining": max_msgs,
+                        "max_messages": max_msgs
+                    }
+                })
                 return
             
             # Auto-unlock logic
             if ctx.get("is_locked") and ctx.get("unlock_at"):
                 unlock_at = datetime.fromisoformat(ctx["unlock_at"].replace("Z", "+00:00"))
                 if datetime.now(timezone.utc) > unlock_at:
-                    if uc.is_enabled():
-                        try:
-                            # Patch the row to unlock
-                            uc._get_client().patch(
-                                f"{uc._REST_URL}/user_context",
-                                headers=uc._HEADERS,
-                                params={"guest_id": f"eq.{guest_id}"},
-                                json={"is_locked": False, "unlock_at": None, "session_msg_count": 0}
-                            )
-                        except Exception as e:
-                            print(f"[status] Error auto-unlocking: {e}")
-                    
+                    uc.reset_context(guest_id)
+                    max_msgs = int(os.getenv("MAX_MESSAGES_PER_SESSION", "15"))
                     self._json_response(200, {
                         "has_context": True, 
-                        "rate_limit": {"allowed": True, "remaining": 5}
+                        "rate_limit": {"allowed": True, "remaining": max_msgs, "max_messages": max_msgs}
                     })
                     return
 
             # If still locked
             if ctx.get("is_locked"):
+                max_msgs = int(os.getenv("MAX_MESSAGES_PER_SESSION", "15"))
                 self._json_response(200, {
                     "has_context": True,
-                    "rate_limit": {"allowed": False, "remaining": 0, "unlock_at": ctx.get("unlock_at")}
+                    "rate_limit": {
+                        "allowed": False, 
+                        "remaining": 0, 
+                        "unlock_at": ctx.get("unlock_at"),
+                        "max_messages": max_msgs
+                    }
                 })
                 return
             
@@ -71,7 +75,11 @@ class handler(BaseHTTPRequestHandler):
             max_msgs = int(os.getenv("MAX_MESSAGES_PER_SESSION", "15"))
             self._json_response(200, {
                 "has_context": True,
-                "rate_limit": {"allowed": True, "remaining": max(0, max_msgs - msg_count)}
+                "rate_limit": {
+                    "allowed": True, 
+                    "remaining": max(0, max_msgs - msg_count),
+                    "max_messages": max_msgs
+                }
             })
 
         except Exception as exc:

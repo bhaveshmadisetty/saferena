@@ -115,6 +115,19 @@ def increment_msg_count(guest_id: str):
     except Exception as e:
         print(f"[user_context] increment_msg_count error: {e}")
 
+def reset_context(guest_id: str):
+    if not is_enabled() or not guest_id:
+        return
+    try:
+        _get_client().patch(
+            f"{_REST_URL}/user_context",
+            headers=_HEADERS,
+            params={"guest_id": f"eq.{guest_id}"},
+            json={"is_locked": False, "unlock_at": None, "session_msg_count": 0}
+        )
+    except Exception as e:
+        print(f"[user_context] reset_context error: {e}")
+
 
 # ---------------------------------------------------------------------------
 # 3. GET OPENING MESSAGE
