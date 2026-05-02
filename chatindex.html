@@ -808,6 +808,7 @@ body {
   overflow: hidden;
   transition: background .2s, transform .2s;
   cursor: pointer;
+  text-align: left;
 }
 
 .support-row::before {
@@ -1269,19 +1270,6 @@ body {
         </div>
       </button>
 
-      <button class="support-row" id="journalBtn" aria-label="Open journal prompt">
-        <div class="support-icon">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-            <rect x="2.5" y="1.5" width="11" height="13" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
-            <path d="M5 5h6M5 8h6M5 11h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
-          </svg>
-        </div>
-        <div>
-          <div class="support-text">Journal prompt</div>
-          <span class="support-sub">A gentle question to write with</span>
-        </div>
-      </button>
-
       <button class="support-row" id="helplineBtn" aria-label="Show helpline information">
         <div class="support-icon">
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -1621,7 +1609,6 @@ const els = {
   usageLeftLabel:  $('usageLeftLabel'),
   breatheBtn:      $('breatheBtn'),
   helplineBtn:     $('helplineBtn'),
-  journalBtn:      $('journalBtn'),
 };
 
 /* ─────────────────────────────────────────
@@ -2381,34 +2368,10 @@ function populateSheet() {
       const hr = els.sheetContent.querySelector('#helplineReveal');
       if (hr) hr.classList.toggle('open');
     });
-    const sheetJournal = els.sheetContent.querySelector('#journalBtn');
-    if (sheetJournal) sheetJournal.addEventListener('click', showJournalPrompt);
     const sheetSave = els.sheetContent.querySelector('#noteSaveSidebar');
     if (sheetSave) sheetSave.addEventListener('click', saveFutureNote);
   }
 }
-
-/* ─────────────────────────────────────────
-   JOURNAL PROMPT
-───────────────────────────────────────── */
-const JOURNAL_PROMPTS = [
-  "What is one thing I needed to hear today, but didn't?",
-  "What emotion has been loudest lately, and what do I think it's trying to say?",
-  "If I could set down one thing I'm carrying right now, what would it be?",
-  "What would I tell a close friend who was feeling exactly what I'm feeling?",
-  "What does rest actually feel like for me?"
-];
-
-function showJournalPrompt() {
-  const prompt = JOURNAL_PROMPTS[Math.floor(Math.random() * JOURNAL_PROMPTS.length)];
-  // Inject into note textarea as placeholder
-  if (els.noteTextSidebar) {
-    els.noteTextSidebar.placeholder = prompt;
-    els.noteTextSidebar.focus();
-  }
-}
-
-els.journalBtn.addEventListener('click', showJournalPrompt);
 
 /* ─────────────────────────────────────────
    SAVE FUTURE NOTE
