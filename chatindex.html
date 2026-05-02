@@ -478,10 +478,13 @@ body {
 /* ─── COMPOSER ───────────────────────────────────── */
 .composer-wrap {
   flex-shrink: 0;
+  flex-grow: 0;
   align-self: stretch;
   width: 100%;
+  max-width: 100%;
   min-width: 0;
   box-sizing: border-box;
+  display: block;
   background: var(--surface);
   border-top: 1px solid var(--border);
   padding: 12px 0 max(12px, env(safe-area-inset-bottom));
@@ -501,6 +504,7 @@ body {
   padding: 0 24px;
   box-sizing: border-box;
   min-width: 0;
+  display: block;
 }
 
 .composer-box {
@@ -525,12 +529,26 @@ body {
 .composer-textarea {
   flex: 1 1 0%;
   min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   min-height: 22px;
   max-height: 140px;
   font-size: 14.5px;
   line-height: 1.55;
   color: var(--text);
   caret-color: var(--primary);
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.composer-textarea::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .composer-textarea::placeholder { color: var(--muted); }
@@ -1346,7 +1364,7 @@ body {
 
     <!-- Composer -->
     <div class="composer-wrap" id="composerWrap">
-      <div class="composer-inner">
+      <div class="composer-inner" id="composerInner">
         <div class="composer-box" id="composerBox">
           <textarea
             class="composer-textarea"
@@ -1565,6 +1583,7 @@ const els = {
   preparingLabel:  $('preparingLabel'),
   typingRow:       $('typingRow'),
   composerWrap:    $('composerWrap'),
+  composerInner:   $('composerInner'),
   composerBox:     $('composerBox'),
   composerInput:   $('composerInput'),
   sendBtn:         $('sendBtn'),
@@ -2114,6 +2133,28 @@ function startCountdown() {
   tick();
 }
 
+/** After gate/BYOK, strip inline layout so composer matches pre-lock sizing (flex/iframe safe). */
+function restoreComposerLayoutAfterUnlock() {
+  const strip = (el, props) => {
+    if (!el || !el.style) return;
+    props.forEach((p) => {
+      try { el.style.removeProperty(p); } catch (e) {}
+    });
+  };
+  const layoutProps = ['width', 'max-width', 'min-width', 'flex', 'flex-basis', 'flex-grow', 'flex-shrink', 'align-self', 'transform'];
+  [els.composerInner, els.composerBox, els.composerInput].forEach((el) => { if (el) strip(el, layoutProps); });
+  strip(els.composerWrap, [...layoutProps, 'display', 'opacity', 'pointer-events']);
+  els.composerWrap.style.display = 'block';
+  els.composerWrap.style.opacity = '1';
+  els.composerWrap.style.pointerEvents = '';
+  els.composerBox.classList.remove('focused');
+  els.composerWrap.classList.remove('focused');
+  if (els.composerInput) {
+    els.composerInput.style.removeProperty('height');
+    els.composerInput.style.height = 'auto';
+  }
+}
+
 function dismissGateWithPersonalKey(validKey) {
   stopGateCountdown();
   try {
@@ -2130,9 +2171,8 @@ function dismissGateWithPersonalKey(validKey) {
   els.gateWrap.setAttribute('aria-hidden', 'true');
   setTimeout(() => {
     els.gateWrap.style.display = 'none';
-    els.composerWrap.style.display = '';
-    els.composerWrap.style.opacity = '1';
-    els.composerWrap.style.pointerEvents = '';
+    restoreComposerLayoutAfterUnlock();
+    autoResizeTextarea();
     enableInput();
   }, 350);
 
