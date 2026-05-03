@@ -41,9 +41,13 @@ class handler(BaseHTTPRequestHandler):
             session_id = payload.get("sessionId")
             guest_id = payload.get("guestId", "")  # NEW: read guest_id from payload
             personal_api_key = payload.get("personal_api_key", "")
+            checkin_context = payload.get("checkinContext", "")
 
             if not isinstance(messages, list):
                 self._json_response(400, {"error": "'messages' must be an array"})
+                return
+            if checkin_context is not None and not isinstance(checkin_context, str):
+                self._json_response(400, {"error": "'checkinContext' must be a string if provided"})
                 return
 
             last_user_msg = ""
@@ -130,6 +134,7 @@ class handler(BaseHTTPRequestHandler):
                 memory_context=memory_context,  # NEW: pass memory context
                 guest_id=guest_id,              # NEW: pass guest_id for context mapping
                 personal_api_key=personal_api_key,
+                checkin_context=checkin_context.strip(),
             )
 
             if not isinstance(reply, str):

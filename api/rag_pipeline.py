@@ -164,6 +164,7 @@ def generate_assistant_reply(
     memory_context: str = "",  # Supabase persistent memory (optional add-on)
     guest_id: str = "",        # User context mapping
     personal_api_key: str = "",
+    checkin_context: str = "",
 ) -> str:
     if not messages:
         return "I am here with you."
@@ -205,6 +206,8 @@ def generate_assistant_reply(
     from api.user_context import build_system_prompt_v2
     base_prompt = build_system_prompt_v2(guest_id)
 
+    checkin_block = checkin_context.strip() if isinstance(checkin_context, str) else ""
+
     prompt = f"""{base_prompt}
 
 ---
@@ -222,6 +225,11 @@ RECENT CHAT:
 
 PERSISTENT MEMORY (from previous sessions, use naturally if relevant):
 {memory_context}
+
+---
+
+USER-EDITABLE CHECK-IN CONTEXT (use as current self-described context; prioritize when relevant):
+{checkin_block}
 
 ---
 

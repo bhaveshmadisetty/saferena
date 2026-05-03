@@ -701,6 +701,32 @@ body {
   transition: background .2s, border-color .2s;
 }
 .checkin-tag:hover { background: var(--faint); border-color: var(--muted); }
+.checkin-editor {
+  width: 100%;
+  min-height: 70px;
+  background: var(--surf3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 11px;
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.45;
+  margin-top: 10px;
+}
+.checkin-editor:focus {
+  border-color: rgba(75,163,174,.35);
+  box-shadow: 0 0 0 2px rgba(75,163,174,.12);
+}
+.checkin-actions { display: flex; justify-content: flex-end; margin-top: 8px; }
+.checkin-save-btn {
+  font-size: 11px;
+  color: var(--text);
+  border: 1px solid var(--border);
+  background: var(--surf3);
+  border-radius: 999px;
+  padding: 6px 10px;
+}
+.checkin-save-btn:hover { border-color: var(--primary); color: var(--primary); }
 
 /* Quick support */
 .support-row {
@@ -1721,6 +1747,15 @@ body {
       <div class="checkin-tags" id="checkinTags">
         <!-- populated by JS -->
       </div>
+      <textarea
+        class="checkin-editor"
+        id="checkinEditor"
+        aria-label="Edit your check-in context"
+        placeholder="Edit context tags (comma or new line separated), e.g. breakup, overthinking, sleep issues"
+      ></textarea>
+      <div class="checkin-actions">
+        <button class="checkin-save-btn" id="checkinSaveBtn" aria-label="Save check-in context">Save check-in</button>
+      </div>
     </div>
 
     <!-- Quick support -->
@@ -1962,10 +1997,12 @@ const STATE = {
   noteSaved: false,
   theme: 'dark',
   hasPersonalKey: false,
+  checkinTags: [],
 };
 
 const STORAGE_MSG_COUNT = 'ss_msg_count';
 const STORAGE_LOCKED_UNTIL = 'ss_locked_until';
+const STORAGE_CHECKIN_TAGS = 'ss_checkin_tags_v1';
 
 let gateCountdownTimer = null;
 
@@ -2189,6 +2226,8 @@ const els = {
   bottomSheet:     $('bottomSheet'),
   sheetContent:    $('sheetContent'),
   checkinTags:     $('checkinTags'),
+  checkinEditor:   $('checkinEditor'),
+  checkinSaveBtn:  $('checkinSaveBtn'),
   usageRingFill:   $('usageRingFill'),
   usageRemaining:  $('usageRemaining'),
   helplineReveal:  $('helplineReveal'),
@@ -2265,9 +2304,71 @@ function selectCuratedMessage(context) {
    RENDER CHECK-IN TAGS
 ───────────────────────────────────────── */
 function renderCheckinTags(tags) {
+  if (!Array.isArray(tags) || tags.length === 0) {
+    els.checkinTags.innerHTML = '<span class="checkin-tag">No context yet</span>';
+    return;
+  }
   els.checkinTags.innerHTML = tags.map(t =>
     `<span class="checkin-tag">${t}</span>`
   ).join('');
+}
+
+function normalizeCheckinTag(tag) {
+  return String(tag || '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 48);
+}
+
+function parseCheckinTextToTags(rawText) {
+  return Array.from(new Set(
+    String(rawText || '')
+      .split(/[\n,|]/)
+      .map(normalizeCheckinTag)
+      .filter(Boolean)
+  )).slice(0, 8);
+}
+
+function saveCheckinTags() {
+  try { localStorage.setItem(STORAGE_CHECKIN_TAGS, JSON.stringify(STATE.checkinTags)); } catch (e) {}
+}
+
+function setCheckinTags(nextTags, options = {}) {
+  const { persist = true, mirrorToEditor = true } = options;
+  STATE.checkinTags = Array.from(new Set((nextTags || []).map(normalizeCheckinTag).filter(Boolean))).slice(0, 8);
+  renderCheckinTags(STATE.checkinTags);
+  if (mirrorToEditor && els.checkinEditor) {
+    els.checkinEditor.value = STATE.checkinTags.join(', ');
+  }
+  if (persist) saveCheckinTags();
+}
+
+function deriveCheckinTagsFromText(text) {
+  const t = String(text || '').toLowerCase();
+  const rules = [
+    { key: /(breakup|relationship|ex|heartbreak)/, tag: 'relationship pain' },
+    { key: /(anxious|anxiety|panic|overthinking|racing thoughts)/, tag: 'anxiety / overthinking' },
+    { key: /(lonely|alone|isolated|nobody)/, tag: 'loneliness' },
+    { key: /(sleep|insomnia|can.t sleep|awake all night)/, tag: 'sleep disturbance' },
+    { key: /(work|job|career|boss|office)/, tag: 'work stress' },
+    { key: /(family|parents|mother|father|home)/, tag: 'family pressure' },
+  ];
+  const derived = [];
+  for (const rule of rules) {
+    if (rule.key.test(t)) derived.push(rule.tag);
+  }
+  return derived;
+}
+
+function enrichCheckinFromMessage(userText) {
+  const derived = deriveCheckinTagsFromText(userText);
+  if (!derived.length) return;
+  const merged = [...STATE.checkinTags, ...derived];
+  setCheckinTags(merged, { persist: true, mirrorToEditor: true });
+}
+
+function currentCheckinContextText() {
+  return STATE.checkinTags.join(' | ');
 }
 
 /* ─────────────────────────────────────────
@@ -2545,6 +2646,7 @@ async function sendMessage() {
   // Append user message
   appendMessage('user', `<p>${escapeHTML(text)}</p>`);
   STATE.messagesHistory.push({ role: 'user', content: text });
+  enrichCheckinFromMessage(text);
 
   // Quota is only increased for AI replies as per user request
   // Removed STATE.msgCount++ from here
@@ -2566,7 +2668,11 @@ async function sendMessage() {
   let replyText = '';
   try {
       const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') && !window.location.port.includes('8080') ? 'http://localhost:8080' : '';
-      const payload = { messages: STATE.messagesHistory, guestId: getGuestId() };
+      const payload = {
+        messages: STATE.messagesHistory,
+        guestId: getGuestId(),
+        checkinContext: currentCheckinContextText(),
+      };
       if (STATE.hasPersonalKey) {
         payload.personal_api_key = localStorage.getItem('ss_personal_key');
       }
@@ -2879,6 +2985,19 @@ function populateSheet() {
       const hr = els.sheetContent.querySelector('#helplineReveal');
       if (hr) hr.classList.toggle('open');
     });
+    const sheetCheckinEditor = els.sheetContent.querySelector('#checkinEditor');
+    const sheetCheckinSave = els.sheetContent.querySelector('#checkinSaveBtn');
+    if (sheetCheckinEditor) {
+      sheetCheckinEditor.value = STATE.checkinTags.join(', ');
+    }
+    if (sheetCheckinSave) {
+      sheetCheckinSave.addEventListener('click', () => {
+        const manualTags = parseCheckinTextToTags(sheetCheckinEditor ? sheetCheckinEditor.value : '');
+        setCheckinTags(manualTags, { persist: true, mirrorToEditor: true });
+        if (sheetCheckinEditor) sheetCheckinEditor.value = STATE.checkinTags.join(', ');
+        els.a11yLive.textContent = 'Check-in context updated.';
+      });
+    }
     const sheetSave = els.sheetContent.querySelector('#noteSaveSidebar');
     if (sheetSave) sheetSave.addEventListener('click', saveFutureNote);
   }
@@ -3196,9 +3315,7 @@ window.addEventListener('ob:complete', async (e) => {
     const tags = [];
     if (e.detail.q1) tags.push(e.detail.q1);
     if (e.detail.q2) tags.push(e.detail.q2);
-    if (typeof renderCheckinTags === 'function') {
-      renderCheckinTags(tags);
-    }
+    if (tags.length) setCheckinTags(tags, { persist: true, mirrorToEditor: true });
   }
   
   await sleep(200);
@@ -3218,6 +3335,24 @@ async function init() {
     const saved = localStorage.getItem('ss_future_note');
     if (saved) els.noteTextSidebar.value = saved;
   } catch(e) {}
+
+  try {
+    const savedCheckin = JSON.parse(localStorage.getItem(STORAGE_CHECKIN_TAGS) || '[]');
+    if (Array.isArray(savedCheckin) && savedCheckin.length) {
+      setCheckinTags(savedCheckin, { persist: false, mirrorToEditor: true });
+    } else {
+      const obRaw = sessionStorage.getItem('ob_context');
+      if (obRaw) {
+        const ob = JSON.parse(obRaw);
+        const seeded = [ob?.q1, ob?.q2].filter(Boolean);
+        setCheckinTags(seeded, { persist: true, mirrorToEditor: true });
+      } else {
+        setCheckinTags([], { persist: false, mirrorToEditor: true });
+      }
+    }
+  } catch (e) {
+    setCheckinTags([], { persist: false, mirrorToEditor: true });
+  }
 
   // Sync message count and history with backend
   try {
@@ -3268,6 +3403,14 @@ async function init() {
   } catch(e) { console.warn("Sync failed", e); }
 
   populateSheet();
+}
+
+if (els.checkinSaveBtn) {
+  els.checkinSaveBtn.addEventListener('click', () => {
+    const manualTags = parseCheckinTextToTags(els.checkinEditor ? els.checkinEditor.value : '');
+    setCheckinTags(manualTags, { persist: true, mirrorToEditor: true });
+    els.a11yLive.textContent = 'Check-in context updated.';
+  });
 }
 
 window.addEventListener('pageshow', (ev) => {
