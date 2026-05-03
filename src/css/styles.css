@@ -574,7 +574,7 @@ textarea::placeholder {
   --ob-faint:     #3a3835;
   --ob-primary:   #4ba3ae;
   --ob-pdim:      #162e30;
-  --ob-pglow:     oklch(0.62 0.08 192 / 0.18);
+  --ob-pglow:     rgba(75, 163, 174, 0.18);
   --ob-warm:      #c48a5a;
   --ob-warm-dim:  #2a1c0e;
   --ob-ease:      cubic-bezier(0.16, 1, 0.3, 1);
@@ -592,7 +592,7 @@ textarea::placeholder {
   --ob-faint:    #c5c3be;
   --ob-primary:  #1a7a84;
   --ob-pdim:     #daeaec;
-  --ob-pglow:    oklch(0.5 0.1 192 / 0.1);
+  --ob-pglow:    rgba(26, 122, 132, 0.1);
   --ob-warm:     #9a6535;
   --ob-warm-dim: #f5e8d8;
 }
@@ -1051,4 +1051,57 @@ textarea::placeholder {
 .ob-name-input:focus {
   border-color: var(--ob-primary);
   box-shadow: 0 0 0 3px var(--ob-pglow);
+}
+
+/* ═══════════════════════════════════════════════════════
+   MOBILE OVERRIDES — DESKTOP COMPLETELY UNAFFECTED
+   All rules scoped inside @media blocks only
+═══════════════════════════════════════════════════════ */
+
+/* ─── PREVENT iOS ZOOM ON INPUT FOCUS ────────────────── */
+@media (max-width: 768px) {
+  textarea,
+  input[type="text"],
+  input[type="password"],
+  .ob-name-input,
+  .ob-textarea {
+    font-size: 16px !important;
+  }
+
+  /* Touch targets — minimum 44px */
+  .icon-btn,
+  .send-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Hide scrollbars on mobile */
+  ::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+  * {
+    scrollbar-width: none;
+  }
+}
+
+/* ─── dvh FALLBACK ───────────────────────────────────── */
+@supports not (height: 100dvh) {
+  .chat-layout {
+    height: 100vh;
+  }
+  .sidebar {
+    height: 100vh;
+  }
+}
+
+/* ─── ONBOARDING MOBILE (≤480px) ─────────────────────── */
+@media (max-width: 480px) {
+  .ob-card {
+    padding: 1.5rem 1rem;
+  }
+  .ob-heading {
+    font-size: 1.3rem;
+  }
 }

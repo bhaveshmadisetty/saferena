@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Saferena</title>
 <meta name="description" content="An anonymous space for emotional support." />
+<meta name="theme-color" content="#0e0d0c" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f5f3ef" media="(prefers-color-scheme: light)">
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
@@ -487,7 +489,7 @@ body {
   display: block;
   background: var(--surface);
   border-top: 1px solid var(--border);
-  padding: 12px 0 max(12px, env(safe-area-inset-bottom));
+  padding: 12px 0 max(12px, env(safe-area-inset-bottom, 0px));
   transition: background .3s, border-color .3s, transform .35s var(--ease-out), box-shadow .35s ease;
 }
 
@@ -593,7 +595,7 @@ body {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 24px 24px max(24px, env(safe-area-inset-bottom));
+  padding: 24px 24px max(24px, env(safe-area-inset-bottom, 0px));
   background: var(--surface);
   border-top: 1px solid var(--border);
   gap: 10px;
@@ -1139,7 +1141,7 @@ body {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 .bottom-sheet.open { transform: translateY(0); }
 
@@ -1169,7 +1171,7 @@ body {
   background: var(--surface);
   border-top: 1px solid var(--border);
   z-index: 50;
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .mobile-sheet-btn {
@@ -1244,6 +1246,139 @@ body {
   0%, 100% { box-shadow: 0 0 0 0 rgba(75,163,174,0); }
   50% { box-shadow: 0 0 12px 0 rgba(75,163,174,.08); }
 }
+/* ═══════════════════════════════════════════════════════
+   MOBILE OVERRIDES — DESKTOP COMPLETELY UNAFFECTED
+   All rules scoped inside @media blocks only
+═══════════════════════════════════════════════════════ */
+
+/* ─── PREVENT iOS ZOOM ON INPUT FOCUS ────────────────── */
+@media (max-width: 768px) {
+  textarea,
+  input[type="text"],
+  input[type="password"],
+  .composer-textarea,
+  .gate-api-input,
+  .gate-key-input,
+  .note-textarea,
+  .checkin-editor,
+  .ob-name-input,
+  .ob-textarea {
+    font-size: 16px !important;
+  }
+
+  /* Prevent pull-to-refresh and overscroll bouncing */
+  body {
+    overscroll-behavior-y: contain;
+  }
+
+  /* Protect composer flex layout on mobile */
+  .composer-box {
+    display: flex !important;
+  }
+  .composer-textarea {
+    flex: 1 1 0% !important;
+    min-width: 0 !important;
+  }
+
+  /* Touch targets — minimum 44px (use min-* to not crush flex) */
+  .send-btn {
+    min-width: 44px;
+    min-height: 44px;
+    width: auto;
+  }
+  .theme-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .modal-close {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .scroll-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .mobile-sheet-btn {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  /* Hide scrollbars for cleaner mobile look */
+  ::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
+  }
+  * {
+    scrollbar-width: none;
+  }
+}
+
+/* ─── SMALL PHONES (≤520px) ──────────────────────────── */
+@media (max-width: 520px) {
+  .header {
+    padding: 0 10px;
+    gap: 8px;
+  }
+  .messages-inner {
+    padding: 0 10px;
+  }
+  .composer-inner {
+    padding: 0 10px;
+  }
+  .composer-box {
+    padding: 10px 10px 10px 14px;
+  }
+  .msg-body {
+    max-width: 92%;
+  }
+  .msg-bubble {
+    padding: 11px 14px;
+    font-size: 14px;
+  }
+  .modal-card {
+    padding: 28px 20px 24px;
+  }
+}
+
+/* ─── VERY SMALL PHONES (≤360px) ─────────────────────── */
+@media (max-width: 360px) {
+  .msg-body {
+    max-width: 95%;
+  }
+  .header-name {
+    font-size: 15px;
+  }
+  .header-actions {
+    gap: 6px;
+  }
+  .msg-counter {
+    font-size: 11px;
+    padding: 3px 8px;
+  }
+}
+
+/* ─── HOVER GUARDS — ONLY ON DEVICES WITH HOVER ─────── */
+@media (hover: none) {
+  .support-row:hover {
+    background: none;
+    transform: none;
+  }
+  .support-row:hover::before {
+    transform: scaleY(0);
+  }
+}
+
+/* ─── dvh FALLBACK FOR OLDER BROWSERS ────────────────── */
+@supports not (height: 100dvh) {
+  .app-shell {
+    height: 100vh;
+  }
+  .bottom-sheet {
+    max-height: 80vh;
+  }
+}
+
 </style>
 </head>
 
@@ -2567,24 +2702,28 @@ els.resetModalConfirm.addEventListener('click', () => {
    THEME TOGGLE
 ───────────────────────────────────────── */
 function toggleTheme() {
-  STATE.theme = STATE.theme === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', STATE.theme);
+  try {
+    STATE.theme = STATE.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', STATE.theme);
 
-  // Rotate animation
-  els.themeBtn.classList.add('rotating');
-  setTimeout(() => els.themeBtn.classList.remove('rotating'), 450);
+    // Rotate animation
+    els.themeBtn.classList.add('rotating');
+    setTimeout(() => els.themeBtn.classList.remove('rotating'), 450);
 
-  // Swap icons
-  if (STATE.theme === 'light') {
-    els.themeIconDark.style.display = 'none';
-    els.themeIconLight.style.display = '';
-  } else {
-    els.themeIconDark.style.display = '';
-    els.themeIconLight.style.display = 'none';
+    // Swap icons
+    if (STATE.theme === 'light') {
+      els.themeIconDark.style.display = 'none';
+      els.themeIconLight.style.display = '';
+    } else {
+      els.themeIconDark.style.display = '';
+      els.themeIconLight.style.display = 'none';
+    }
+
+    // Persist
+    try { localStorage.setItem('ss_theme', STATE.theme); } catch(e) {}
+  } catch(err) {
+    console.error('toggleTheme failed:', err);
   }
-
-  // Persist
-  try { localStorage.setItem('ss_theme', STATE.theme); } catch(e) {}
 }
 
 els.themeBtn.addEventListener('click', toggleTheme);
