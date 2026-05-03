@@ -822,6 +822,39 @@ body {
 }
 .checkin-save-btn:hover { border-color: var(--primary); color: var(--primary); }
 
+.checkin-summary {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+  margin-top: 10px;
+  padding: 10px;
+  background: var(--surf2);
+  border-left: 2px solid var(--primary);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-style: italic;
+}
+
+.checkin-toggle {
+  font-size: 11px;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 0;
+  margin-top: 8px;
+  text-decoration: underline;
+  opacity: .7;
+}
+.checkin-toggle:hover { opacity: 1; }
+
+.checkin-editor-wrap {
+  display: none;
+  margin-top: 10px;
+}
+.checkin-editor-wrap.open {
+  display: block;
+}
+
 /* Quick support */
 .support-row {
   display: flex;
@@ -1059,6 +1092,27 @@ body {
 }
 .breath-btn:hover { background: var(--faint); border-color: var(--muted); }
 
+.modal-danger-btn {
+  padding: 10px 28px;
+  border-radius: 20px;
+  background: var(--danger);
+  border: 1px solid rgba(255,255,255,.1);
+  font-size: 14px;
+  color: white;
+  transition: opacity .2s, transform .1s;
+}
+.modal-danger-btn:hover { opacity: .9; }
+.modal-danger-btn:active { transform: scale(.97); }
+
+.modal-note {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 18px;
+  line-height: 1.5;
+  opacity: .8;
+}
+
 /* ─── BOTTOM SHEET (MOBILE) ──────────────────────── */
 .sheet-overlay {
   display: none;
@@ -1270,20 +1324,28 @@ body {
       </div>
     </div>
 
-    <!-- Check-in context -->
+    <!-- How you're feeling (Session Pulse) -->
     <div class="sb-section">
-      <div class="sb-label">Your check-in</div>
+      <div class="sb-label">How you're feeling</div>
       <div class="checkin-tags" id="checkinTags">
         <!-- populated by JS -->
       </div>
-      <textarea
-        class="checkin-editor"
-        id="checkinEditor"
-        aria-label="Edit your check-in context"
-        placeholder="Edit context tags (comma or new line separated), e.g. breakup, overthinking, sleep issues"
-      ></textarea>
-      <div class="checkin-actions">
-        <button class="checkin-save-btn" id="checkinSaveBtn" aria-label="Save check-in context">Save check-in</button>
+      <div class="checkin-summary" id="checkinSummary">
+        Reflecting on what you've shared...
+      </div>
+      
+      <button class="checkin-toggle" id="checkinToggle" aria-expanded="false">Edit manually</button>
+      
+      <div class="checkin-editor-wrap" id="checkinEditorWrap">
+        <textarea
+          class="checkin-editor"
+          id="checkinEditor"
+          aria-label="Edit your context tags"
+          placeholder="Edit context tags (comma or new line separated), e.g. breakup, overthinking, sleep issues"
+        ></textarea>
+        <div class="checkin-actions">
+          <button class="checkin-save-btn" id="checkinSaveBtn" aria-label="Save context tags">Save tags</button>
+        </div>
       </div>
     </div>
 
@@ -1440,6 +1502,37 @@ body {
 
 </div>
 
+<!-- ═══ RESET CONFIRMATION MODAL ═══ -->
+<div class="modal-overlay" id="resetModal" role="dialog" aria-modal="true" aria-labelledby="resetTitle" aria-hidden="true">
+  <div class="modal-card">
+    <button class="modal-close" id="resetModalClose" aria-label="Close">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+        <path d="M2 2l10 10M12 2L2 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </button>
+
+    <h2 class="modal-title" id="resetTitle">Clear session?</h2>
+    <p class="modal-sub" style="text-align: left; margin-bottom: 20px;">
+      This will completely reset your current experience:
+    </p>
+    
+    <ul style="font-size: 13px; color: var(--muted); text-align: left; width: 100%; margin-bottom: 24px; padding-left: 18px; line-height: 1.7;">
+      <li>Your **message limit will be reset**.</li>
+      <li>The **onboarding process** will start again.</li>
+      <li>The chatbot's **memory of this chat** will be cleared.</li>
+    </ul>
+
+    <div style="display: flex; flex-direction: column; gap: 0.75rem; width: 100%;">
+      <button class="modal-danger-btn" id="resetModalConfirm" aria-label="Yes, clear everything">Yes, clear everything</button>
+      <button class="breath-btn" id="resetModalCancel" aria-label="Cancel">Cancel</button>
+    </div>
+
+    <p class="modal-note">
+      Tip: If your limit is over, you can enter your own OpenRouter key to continue without resetting.
+    </p>
+  </div>
+</div>
+
 <!-- ═══ BREATHING MODAL ═══ -->
 <div class="modal-overlay" id="breathModal" role="dialog" aria-modal="true" aria-labelledby="breathTitle" aria-hidden="true">
   <div class="modal-card">
@@ -1507,6 +1600,7 @@ const STATE = {
   helplineOpen: false,
   noteSaved: false,
   theme: 'dark',
+  messagesHistory: [],
 };
 
 /* ─────────────────────────────────────────
@@ -1620,12 +1714,18 @@ const els = {
   breathPhase:     $('breathPhase'),
   breathStartBtn:  $('breathStartBtn'),
   breathModalClose:$('breathModalClose'),
+  resetModal:      $('resetModal'),
+  resetModalClose: $('resetModalClose'),
+  resetModalConfirm: $('resetModalConfirm'),
+  resetModalCancel: $('resetModalCancel'),
   sheetOverlay:    $('sheetOverlay'),
   bottomSheet:     $('bottomSheet'),
   sheetContent:    $('sheetContent'),
   checkinTags:     $('checkinTags'),
+  checkinSummary:  $('checkinSummary'),
+  checkinToggle:   $('checkinToggle'),
+  checkinEditorWrap: $('checkinEditorWrap'),
   checkinEditor:   $('checkinEditor'),
-  checkinSaveBtn:  $('checkinSaveBtn'),
   usageRingFill:   $('usageRingFill'),
   usageRemaining:  $('usageRemaining'),
   helplineReveal:  $('helplineReveal'),
@@ -1647,6 +1747,7 @@ const els = {
   usageLeftLabel:  $('usageLeftLabel'),
   breatheBtn:      $('breatheBtn'),
   helplineBtn:     $('helplineBtn'),
+  checkinSaveBtn:  $('checkinSaveBtn'),
 };
 
 /* ─────────────────────────────────────────
@@ -2137,24 +2238,57 @@ async function sendMessage() {
   // Show typing, get AI response
   disableInput();
   showTyping();
-  await sleep(1000 + Math.random() * 600);
-  hideTyping();
+  
+  try {
+    const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') && !window.location.port.includes('8080') ? 'http://localhost:8080' : '';
+    
+    // Prepare history for backend (minimal version)
+    const messages = STATE.messagesHistory.map(m => ({ role: m.role, content: m.content }));
+    messages.push({ role: 'user', content: text });
 
-  // Pick demo reply — TODO: pass STORAGE_PERSONAL_KEY to backend when wired
-  const replyLines = DEMO_REPLIES[demoReplyIdx % DEMO_REPLIES.length];
-  demoReplyIdx++;
+    const payload = {
+      messages: messages,
+      sessionId: getGuestId(),
+      guestId: getGuestId(),
+      personal_api_key: localStorage.getItem(STORAGE_PERSONAL_KEY) || '',
+      checkinContext: localStorage.getItem('ss_checkin_tags_v1') || ''
+    };
 
-  // TODO: Replace with real API call to your backend
-  // const response = await fetch('/api/chat', { method:'POST', body: JSON.stringify({ message: text, sessionId: getGuestId() }) });
-  // const data = await response.json();
-  // const replyLines = data.message.split('\n');
+    const response = await fetch(API_BASE + '/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
 
-  appendMessage('ai', msgLinesToHTML(replyLines));
+    if (!response.ok) throw new Error('API request failed');
 
-  STATE.msgCount++;
-  persistMsgCount();
-  updateUsageUI();
-  enableInput();
+    const data = await response.json();
+    hideTyping();
+
+    const replyText = data.reply || "I'm sorry, I'm having trouble thinking clearly right now.";
+    const replyLines = replyText.split('\n');
+    appendMessage('ai', msgLinesToHTML(replyLines));
+    STATE.messagesHistory.push({ role: 'assistant', content: replyText });
+
+    // Update check-in summary if returned
+    if (data.summary && els.checkinSummary) {
+      els.checkinSummary.textContent = data.summary;
+    }
+
+    const sessionClosedReply = replyText.includes('This session has reached its natural close');
+    enableInput();
+
+    // If we're using a personal key, we don't increment local count (the backend handles its own logic)
+    if (!localStorage.getItem(STORAGE_PERSONAL_KEY) && !replyText.includes('*(System override accepted)*')) {
+        // STATE.msgCount incremented at start of function
+    }
+
+  } catch (err) {
+    console.error(err);
+    hideTyping();
+    appendMessage('ai', '<p>I encountered an error. Please try again or check your connection.</p>');
+    enableInput();
+  }
 
   if (!STATE.unlimitedMode && STATE.msgCount >= STATE.MAX_MSGS) {
     disableInput();
@@ -2395,6 +2529,40 @@ els.breathStartBtn.addEventListener('click', () => {
 els.breathModalClose.addEventListener('click', closeBreathingModal);
 els.breathModal.addEventListener('click', e => { if (e.target === els.breathModal) closeBreathingModal(); });
 
+
+function openResetModal() {
+  els.resetModal.classList.add('open');
+  els.resetModal.removeAttribute('aria-hidden');
+  els.resetModal.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+  els.resetModalClose.focus();
+}
+
+function closeResetModal() {
+  els.resetModal.classList.remove('open');
+  els.resetModal.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+}
+
+els.resetBtn.addEventListener('click', openResetModal);
+els.resetModalClose.addEventListener('click', closeResetModal);
+els.resetModalCancel.addEventListener('click', closeResetModal);
+els.resetModal.addEventListener('click', e => { if (e.target === els.resetModal) closeResetModal(); });
+
+els.resetModalConfirm.addEventListener('click', () => {
+  try {
+    sessionStorage.clear();
+    localStorage.removeItem('ss_future_note');
+    localStorage.removeItem(STORAGE_MSG_COUNT);
+    localStorage.removeItem(STORAGE_LOCKED_UNTIL);
+    localStorage.removeItem('ss_personal_key');
+    localStorage.removeItem('ss_guest_id');
+    localStorage.removeItem('ss_checkin_tags_v1');
+    document.cookie = 'guest_id=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax';
+  } catch(e) {}
+  location.reload();
+});
+
 /* ─────────────────────────────────────────
    THEME TOGGLE
 ───────────────────────────────────────── */
@@ -2559,17 +2727,7 @@ els.gateUnlockBtn.addEventListener('click', async () => {
 /* ─────────────────────────────────────────
    RESET SESSION
 ───────────────────────────────────────── */
-els.resetBtn.addEventListener('click', () => {
-  if (!confirm('Clear this session? Your conversation will be removed.')) return;
-  try {
-    sessionStorage.clear();
-    localStorage.removeItem('ss_future_note');
-    localStorage.removeItem(STORAGE_MSG_COUNT);
-    localStorage.removeItem(STORAGE_LOCKED_UNTIL);
-    localStorage.removeItem(STORAGE_PERSONAL_KEY);
-  } catch(e) {}
-  location.reload();
-});
+
 
 /* ─────────────────────────────────────────
    COMPOSER INPUT EVENTS
@@ -2634,8 +2792,12 @@ els.breathModal.addEventListener('keydown', e => {
    INIT
 ───────────────────────────────────────── */
 async function init() {
-  getGuestId();
-  restoreSessionUsage();
+  const guestId = getGuestId();
+
+  if (!STATE.unlimitedMode) {
+    restoreSessionUsage();
+    updateUsageUI();
+  }
 
   // Restore saved note
   try {
@@ -2643,18 +2805,81 @@ async function init() {
     if (saved) els.noteTextSidebar.value = saved;
   } catch(e) {}
 
-  // Render check-in tags from context
-  const ctx = selectCuratedMessage(STATE.onboardingContext);
-  renderCheckinTags(ctx.tags);
+  // Sync check-in tags from local storage or defaults
+  try {
+    const savedCheckin = JSON.parse(localStorage.getItem(STORAGE_CHECKIN_TAGS) || '[]');
+    if (Array.isArray(savedCheckin) && savedCheckin.length) {
+      setCheckinTags(savedCheckin, { persist: false, mirrorToEditor: true });
+    } else {
+      const ctx = selectCuratedMessage(STATE.onboardingContext);
+      setCheckinTags(ctx.tags, { persist: false, mirrorToEditor: true });
+    }
+  } catch (e) {
+    setCheckinTags([], { persist: false, mirrorToEditor: true });
+  }
 
-  updateUsageUI();
+  // Sync with backend
+  try {
+    const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') && !window.location.port.includes('8080') ? 'http://localhost:8080' : '';
+    
+    // 1. Sync Quota
+    const statusRes = await fetch(API_BASE + `/api/status/${guestId}`);
+    if (statusRes.ok) {
+      const data = await statusRes.json();
+      if (data.rate_limit) {
+        STATE.msgCount = data.rate_limit.used || 0;
+        STATE.MAX_MSGS = data.rate_limit.max || 15;
+        persistMsgCount();
+        updateUsageUI();
+        if (!STATE.unlimitedMode && (data.rate_limit.allowed === false || STATE.msgCount >= STATE.MAX_MSGS)) {
+          showGate();
+        }
+      }
+    }
+
+    // 2. Sync History
+    const historyRes = await fetch(API_BASE + `/api/history/${guestId}`);
+    if (historyRes.ok) {
+      const data = await historyRes.json();
+      if (data.history && data.history.length > 0) {
+        // Clear existing messages (except opening) if any
+        // els.messagesInner.innerHTML = ''; 
+        
+        data.history.forEach(m => {
+          const role = m.role === 'assistant' ? 'ai' : m.role;
+          const html = role === 'ai' ? msgLinesToHTML(m.content.split('\n')) : `<p>${escapeHTML(m.content)}</p>`;
+          appendMessage(role, html);
+          STATE.messagesHistory.push({ role: m.role, content: m.content });
+        });
+        scrollToBottom();
+      }
+    }
+  } catch(e) { console.warn("Sync failed", e); }
 
   // Populate mobile sheet
   populateSheet();
 
   // Begin curated reveal sequence
   await sleep(200);
-  await revealCuratedMessage();
+  if (STATE.messagesHistory.length === 0) {
+    await revealCuratedMessage();
+  }
+}
+
+if (els.checkinSaveBtn) {
+  els.checkinSaveBtn.addEventListener('click', () => {
+    const manualTags = parseCheckinTextToTags(els.checkinEditor ? els.checkinEditor.value : '');
+    setCheckinTags(manualTags, { persist: true, mirrorToEditor: true });
+    els.a11yLive.textContent = 'Check-in context updated.';
+  });
+}
+
+if (els.checkinToggle) {
+  els.checkinToggle.addEventListener('click', () => {
+    const isOpen = els.checkinEditorWrap.classList.toggle('open');
+    els.checkinToggle.textContent = isOpen ? 'Hide editor' : 'Edit manually';
+    els.checkinToggle.setAttribute('aria-expanded', isOpen);
+  });
 }
 
 // Kick off when DOM is ready

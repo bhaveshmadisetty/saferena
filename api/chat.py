@@ -128,7 +128,7 @@ class handler(BaseHTTPRequestHandler):
             # Lazy import to catch import errors gracefully
             from rag_pipeline_lite import generate_assistant_reply
 
-            reply = generate_assistant_reply(
+            result = generate_assistant_reply(
                 messages,
                 session_id=session_id,
                 memory_context=memory_context,  # NEW: pass memory context
@@ -136,6 +136,9 @@ class handler(BaseHTTPRequestHandler):
                 personal_api_key=personal_api_key,
                 checkin_context=checkin_context.strip(),
             )
+            
+            reply = result.get("reply", "I am here with you.")
+            summary = result.get("summary", "")
 
             if not isinstance(reply, str):
                 self._json_response(500, {"error": "Pipeline returned non-string reply"})
@@ -158,7 +161,7 @@ class handler(BaseHTTPRequestHandler):
                         print(f"[chat] Failed to increment count: {uc_err}")
             # ---- END MEMORY ----
 
-            self._json_response(200, {"reply": reply})
+            self._json_response(200, {"reply": reply, "summary": summary})
 
         except Exception as exc:
             tb = traceback.format_exc()

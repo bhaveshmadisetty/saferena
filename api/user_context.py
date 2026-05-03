@@ -263,9 +263,15 @@ Tone preference: {q5}
                 context_block += "\nTONE DIRECTIVE: Direct and honest. No sugarcoating. Still kind, but say what you actually think.\n"
 
     count = ctx.get("session_msg_count", 0)
-    if count >= 12:
-        context_block += f"\n⚠️ MESSAGE LIMIT: {count}/15 messages used. Naturally bring the session toward a close. Ask if there's anything important to cover before the session ends.\n"
-    if count >= 15:
-        context_block += "\n⚠️ FINAL MESSAGE: Give a warm, meaningful closing. Reference what they shared. Tell them you'll remember. Mention they can return in 3 days.\n"
+    if count >= 10 and count < 12:
+        context_block += f"\n⚠️ SESSION PROGRESS: {count}/15 messages. Acknowledge the progress made today and start naturally easing the conversation toward a close. Do not be abrupt.\n"
+    elif count >= 12 and count < 15:
+        remaining = 15 - count
+        context_block += f"\n⚠️ NEAR LIMIT: {count}/15 messages ({remaining} left). Explicitly mention that the session is nearing its end. Ask if there's one last important thing to cover or summarize.\n"
+    elif count >= 15:
+        context_block += "\n⚠️ FINAL MESSAGE: Warmly close the session. Reference what they shared today. Remind them they can return in 3 days to talk more.\n"
+
+    # High-intensity breathing suggestion rule
+    context_block += "\n[HIGH-INTENSITY RULE] If the user is showing signs of extreme panic, spiraling, or very high emotional intensity, GENTLY suggest the breathing exercise in the sidebar (leaf icon). Say: 'I'll be right here while you take a moment for yourself.' and assure them you'll wait.\n"
 
     return base + context_block

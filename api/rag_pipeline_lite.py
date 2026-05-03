@@ -230,9 +230,9 @@ def generate_assistant_reply(
     guest_id: str = "",        # User context mapping
     personal_api_key: str = "",
     checkin_context: str = "",
-) -> str:
+) -> dict[str, str]:
     if not messages:
-        return "I am here with you."
+        return {"reply": "I am here with you.", "summary": ""}
 
     chat_history = []
     current_user = None
@@ -345,4 +345,4 @@ REPLY:
     new_summary = update_summary(chat_history, prev_summary)
     session_summaries[sid] = new_summary
 
-    return reply
+    return {"reply": reply, "summary": new_summary}
