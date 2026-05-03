@@ -60,7 +60,10 @@ def api_status(guest_id):
     import api.user_context as uc
     ctx = uc.get_context(guest_id)
     if not ctx: return jsonify({"has_context": False})
-    
+
+    max_msgs = int(os.getenv("MAX_MESSAGES_PER_SESSION", "15"))
+
+    # Check if the lock period has expired — if so, reset the user
     if ctx.get("is_locked") and ctx.get("unlock_at"):
         from datetime import datetime, timezone
         unlock_at = datetime.fromisoformat(ctx["unlock_at"].replace("Z", "+00:00"))
@@ -74,17 +77,16 @@ def api_status(guest_id):
                         json={"is_locked": False, "unlock_at": None, "session_msg_count": 0}
                     )
                 except Exception: pass
-            # After unlocking, report remaining using configurable max
-    max_msgs = int(os.getenv("MAX_MESSAGES_PER_SESSION", "15"))
-    return jsonify({"has_context": True, "rate_limit": {"allowed": True, "remaining": max_msgs}})
-    
+            # Report full remaining after reset
+            return jsonify({"has_context": True, "rate_limit": {"allowed": True, "remaining": max_msgs, "max_messages": max_msgs}})
+
+    # Still locked
     if ctx.get("is_locked"):
-        return jsonify({"has_context": True, "rate_limit": {"allowed": False, "remaining": 0, "unlock_at": ctx.get("unlock_at")}})
-        
+        return jsonify({"has_context": True, "rate_limit": {"allowed": False, "remaining": 0, "unlock_at": ctx.get("unlock_at"), "max_messages": max_msgs}})
+
+    # Normal: report actual remaining
     msg_count = ctx.get("session_msg_count", 0)
-    # Configurable limit for status response
-    max_msgs = int(os.getenv("MAX_MESSAGES_PER_SESSION", "15"))
-    return jsonify({"has_context": True, "rate_limit": {"allowed": True, "remaining": max(0, max_msgs - msg_count)}})
+    return jsonify({"has_context": True, "rate_limit": {"allowed": True, "remaining": max(0, max_msgs - msg_count), "max_messages": max_msgs}})
 
 @app.route("/api/opening/<guest_id>", methods=["GET", "OPTIONS"])
 def api_opening(guest_id):
