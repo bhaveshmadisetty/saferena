@@ -2607,7 +2607,7 @@ async function revealCuratedMessage(customMessage) {
   hideTyping();
 
   // Build full HTML for accessibility
-  const lines = customMessage.split('\n');
+  const lines = Array.isArray(customMessage) ? customMessage : customMessage.split('\n');
   const fullHTML = msgLinesToHTML(lines);
 
   // Create row with visible content for screen readers (sr-only) + empty display div
