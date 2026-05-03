@@ -1614,39 +1614,39 @@ const CURATED_MESSAGES = {
   breakup: {
     tags: ['💔 Breakup', '🌀 Overthinking', '👂 Needs listening'],
     message: [
-      'Two years is not a small thing.',
-      'That kind of ending doesn't just take a person — it takes routines, hopes, and the version of you that existed inside that relationship.',
-      '',
-      'You don't need to be okay here.',
-      'Take your time. What happened?'
+      "Two years is not a small thing.",
+      "That kind of ending doesn't just take a person — it takes routines, hopes, and the version of you that existed inside that relationship.",
+      "",
+      "You don't need to be okay here.",
+      "Take your time. What happened?"
     ]
   },
   anxiety: {
     tags: ['🌀 Anxiety', '💭 Racing thoughts', '👂 Needs listening'],
     message: [
-      'When your mind has been running without rest, even small things start to feel heavy.',
-      'You don't need to organize your thoughts before speaking to me.',
-      '',
-      'Start wherever your mind keeps returning.'
+      "When your mind has been running without rest, even small things start to feel heavy.",
+      "You don't need to organize your thoughts before speaking to me.",
+      "",
+      "Start wherever your mind keeps returning."
     ]
   },
   loneliness: {
     tags: ['🤍 Loneliness', '🌫️ Feeling unseen', '👂 Needs space'],
     message: [
-      'Feeling unseen for too long changes the way the world feels.',
-      'It can make even ordinary moments feel distant.',
-      '',
-      'You don't need to make this sound reasonable.',
-      'What has this been like for you lately?'
+      "Feeling unseen for too long changes the way the world feels.",
+      "It can make even ordinary moments feel distant.",
+      "",
+      "You don't need to make this sound reasonable.",
+      "What has this been like for you lately?"
     ]
   },
   general: {
     tags: ['💬 Open conversation', '🌿 Settling in'],
     message: [
-      'I'm here, and this space is yours for a while.',
-      'You can vent, think out loud, or start in the middle of the story.',
-      '',
-      'What feels most present right now?'
+      "I'm here, and this space is yours for a while.",
+      "You can vent, think out loud, or start in the middle of the story.",
+      "",
+      "What feels most present right now?"
     ]
   }
 };
@@ -2178,7 +2178,7 @@ async function revealCuratedMessage() {
   const micro = document.createElement('p');
   micro.className = 'msg-micro';
   micro.setAttribute('aria-hidden', 'true');
-  micro.textContent = 'I'm listening.';
+  micro.textContent = "I'm listening.";
   row.querySelector('.msg-body').appendChild(micro);
 
   await sleep(400);
