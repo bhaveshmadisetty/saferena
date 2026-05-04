@@ -1166,6 +1166,17 @@ body {
   .composer-inner { padding: 0 16px; }
   .msg-body { max-width: 85%; }
   .header-status { display: none; }
+  /* Ensure textarea is interactive on mobile */
+  .composer-textarea {
+    font-size: 16px !important; /* Prevent iOS zoom on focus */
+    -webkit-user-select: text !important;
+    user-select: text !important;
+  }
+  /* Ensure composer-wrap is not blocked */
+  .composer-wrap {
+    position: relative;
+    z-index: 10;
+  }
 }
 
 /* ─── FOCUS RINGS ────────────────────────────────── */
@@ -2872,8 +2883,19 @@ async function revealCuratedMessage(customMessage) {
 ───────────────────────────────────────── */
 function enableInput() {
   STATE.inputEnabled = true;
-  els.composerInput.disabled = false;
-  els.composerInput.focus();
+  if (els.composerInput) {
+    els.composerInput.disabled = false;
+    // Force remove disabled attribute (some mobile browsers need this)
+    els.composerInput.removeAttribute('disabled');
+    // Ensure the textarea is interactive
+    els.composerInput.style.pointerEvents = 'auto';
+    els.composerInput.style.webkitUserSelect = 'text';
+    try { els.composerInput.focus(); } catch(e) {}
+  }
+  if (els.sendBtn) {
+    els.sendBtn.disabled = false;
+  }
+  console.log('Input enabled, inputEnabled:', STATE.inputEnabled);
 }
 
 function disableInput() {
@@ -3213,6 +3235,9 @@ function toggleTheme() {
   try {
     STATE.theme = STATE.theme === 'dark' ? 'light' : 'dark';
     document.documentElement.setAttribute('data-theme', STATE.theme);
+    console.log('Theme toggled to:', STATE.theme, 'data-theme:', document.documentElement.getAttribute('data-theme'));
+    // Force a reflow to ensure CSS variables update
+    document.body.offsetHeight;
 
     // Rotate animation
     els.themeBtn.classList.add('rotating');
@@ -3234,6 +3259,7 @@ function toggleTheme() {
   }
 }
 
+// Use 'click' - it works on both desktop and mobile (fires after touchend on mobile)
 els.themeBtn.addEventListener('click', toggleTheme);
 
 // Restore saved theme
@@ -3610,16 +3636,29 @@ window.addEventListener('ob:complete', async (e) => {
   }
   const msg = e.detail?.openingMessage || "I'm here for you.";
   STATE.messagesHistory.push({ role: 'assistant', content: msg });
-  
+
   if (e.detail?.q1) {
     const tags = [];
     if (e.detail.q1) tags.push(e.detail.q1);
     if (e.detail.q2) tags.push(e.detail.q2);
     if (tags.length) setCheckinTags(tags, { persist: true, mirrorToEditor: true });
   }
-  
+
   await sleep(200);
   await revealCuratedMessage(msg);
+
+  // Safeguard: Force-enable input after a delay in case syncQuota disabled it
+  setTimeout(() => {
+    if (STATE.inputEnabled !== true) {
+      console.log('Re-enabling input after safeguard delay');
+      STATE.inputEnabled = true;
+      if (els.composerInput) {
+        els.composerInput.disabled = false;
+        els.composerInput.removeAttribute('disabled');
+      }
+      if (els.sendBtn) els.sendBtn.disabled = false;
+    }
+  }, 1000);
 });
 
 async function init() {
@@ -4370,11 +4409,14 @@ if (document.readyState === 'loading') {
   function hideOverlay() {
     const overlay = document.getElementById('ob-overlay');
     if (!overlay) return;
+    // Force pointer-events none immediately, don't rely on CSS transition alone
+    overlay.style.pointerEvents = 'none';
     overlay.classList.add('ob-hiding');
     setTimeout(() => {
       overlay.style.display = 'none';
-      overlay.remove();
-    }, 500);
+      // Use removeEventListener approach - safely remove
+      try { overlay.remove(); } catch(e) {}
+    }, 600); // Slightly longer than CSS transition (500ms) to ensure it completes
   }
 
 })(); // end IIFE
