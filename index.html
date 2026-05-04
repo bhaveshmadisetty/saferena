@@ -2,11 +2,21 @@
 <html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Saferena</title>
 <meta name="description" content="An anonymous space for emotional support." />
 <meta name="theme-color" content="#0e0d0c" media="(prefers-color-scheme: dark)">
 <meta name="theme-color" content="#f5f3ef" media="(prefers-color-scheme: light)">
+
+<script>
+  (function() {
+    const saved = localStorage.getItem('ss_theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const theme = saved || (prefersDark ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  })();
+</script>
+
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
@@ -304,7 +314,6 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
   position: relative;
 }
 
@@ -505,6 +514,9 @@ body {
   border-top: 1px solid var(--border);
   padding: 12px 0 max(12px, env(safe-area-inset-bottom, 0px));
   transition: background .3s, border-color .3s, transform .35s var(--ease-out), box-shadow .35s ease;
+  position: sticky;
+  bottom: var(--kbd-offset, 0px);
+  z-index: 100;
 }
 
 .composer-wrap.focused {
@@ -1041,7 +1053,8 @@ body {
   background: var(--surface);
   border-top: 1px solid var(--border);
   border-radius: 22px 22px 0 0;
-  z-index: 151;
+  z-index: 50;
+  pointer-events: none;
   transform: translateY(100%);
   transition: transform .4s var(--ease-smooth);
   display: flex;
@@ -1049,7 +1062,11 @@ body {
   overflow: hidden;
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
-.bottom-sheet.open { transform: translateY(0); }
+.bottom-sheet.open {
+  transform: translateY(0);
+  z-index: 200;
+  pointer-events: auto;
+}
 
 .sheet-handle-bar {
   display: flex;
@@ -1172,14 +1189,31 @@ body {
     -webkit-user-select: text !important;
     user-select: text !important;
   }
-  /* Ensure composer-wrap is not blocked */
-  .composer-wrap {
-    position: relative;
-    z-index: 10;
-  }
 }
 
 /* ─── FOCUS RINGS ────────────────────────────────── */
+/* Prevent zoom on input focus (iOS) */
+input, textarea, select {
+  font-size: max(16px, 1rem);
+}
+
+/* ─── CSS TRANSITIONS FOR THEME CHANGE ────────────────── */
+*, *::before, *::after {
+  transition:
+    background-color 250ms ease,
+    color 250ms ease,
+    border-color 250ms ease,
+    box-shadow 250ms ease;
+}
+
+/* Exclude elements where transitions would break UX */
+.no-transition,
+.msg-bubble,
+.typing-bubble,
+.composer-box {
+  transition: none !important;
+}
+
 :focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
@@ -1869,6 +1903,17 @@ body {
   .bottom-sheet {
     max-height: 80vh;
   }
+}
+
+/* Ensure all height declarations have dvh with vh fallback */
+.app-shell {
+  height: 100vh;
+  height: 100dvh;
+}
+
+.bottom-sheet {
+  max-height: 80vh;
+  max-height: 80dvh;
 }
 
 </style>
@@ -3231,6 +3276,19 @@ els.resetModalConfirm.addEventListener('click', () => {
 /* ─────────────────────────────────────────
    THEME TOGGLE
 ───────────────────────────────────────── */
+function updateThemeIcon(theme) {
+  const btn = document.getElementById('themeBtn');
+  if (!btn) return;
+
+  const moonSVG = '<svg id="themeIconDark" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 1a7 7 0 1 0 6 10.47A5 5 0 0 1 8 1z" fill="currentColor"/></svg>';
+  const sunSVG = '<svg id="themeIconLight" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" style="display:none"><circle cx="8" cy="8" r="3" fill="currentColor"/><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.22 3.22l1.06 1.06M11.72 11.72l1.06 1.06M11.72 4.28l-1.06 1.06M4.28 11.72l-1.06 1.06" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
+
+  btn.innerHTML = theme === 'dark' ? moonSVG : sunSVG;
+  btn.setAttribute('aria-label',
+    theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'
+  );
+}
+
 function toggleTheme() {
   try {
     STATE.theme = STATE.theme === 'dark' ? 'light' : 'dark';
@@ -3243,14 +3301,8 @@ function toggleTheme() {
     els.themeBtn.classList.add('rotating');
     setTimeout(() => els.themeBtn.classList.remove('rotating'), 450);
 
-    // Swap icons
-    if (STATE.theme === 'light') {
-      els.themeIconDark.style.display = 'none';
-      els.themeIconLight.style.display = '';
-    } else {
-      els.themeIconDark.style.display = '';
-      els.themeIconLight.style.display = 'none';
-    }
+    // Update icon
+    updateThemeIcon(STATE.theme);
 
     // Persist
     try { localStorage.setItem('ss_theme', STATE.theme); } catch(e) {}
@@ -3259,8 +3311,16 @@ function toggleTheme() {
   }
 }
 
-// Use 'click' - it works on both desktop and mobile (fires after touchend on mobile)
-els.themeBtn.addEventListener('click', toggleTheme);
+// Wrap in DOMContentLoaded to ensure DOM is ready (Bug #2 Fix 1)
+document.addEventListener('DOMContentLoaded', () => {
+  const btn = document.getElementById('themeBtn');
+  if (btn) {
+    console.log('Theme button found, attaching click listener');
+    btn.addEventListener('click', toggleTheme);
+  } else {
+    console.error('Theme button NOT found! Check ID themeBtn');
+  }
+});
 
 // Restore saved theme
 try {
@@ -3268,8 +3328,7 @@ try {
   if (saved && saved !== 'dark') {
     STATE.theme = saved;
     document.documentElement.setAttribute('data-theme', saved);
-    els.themeIconDark.style.display = 'none';
-    els.themeIconLight.style.display = '';
+    updateThemeIcon(saved);
   }
 } catch(e) {}
 
@@ -3771,6 +3830,42 @@ if (document.readyState === 'loading') {
 } else {
   init();
 }
+
+/* ─── VISUAL VIEWPORT API (keep composer above keyboard) ────────── */
+if (window.visualViewport) {
+  const composer = document.getElementById('composerWrap') || document.querySelector('.composer-wrap');
+  const messagesWrap = document.getElementById('messagesWrap');
+
+  const adjustForKeyboard = () => {
+    const offsetFromBottom = window.innerHeight
+      - window.visualViewport.height
+      - window.visualViewport.offsetTop;
+    const offset = Math.max(0, offsetFromBottom);
+    // Use scroll-padding-bottom on messages container so content scrolls above keyboard
+    if (messagesWrap) {
+      messagesWrap.style.scrollPaddingBottom = `${offset}px`;
+    }
+    // Adjust composer bottom offset via CSS custom property (works with sticky positioning)
+    if (composer) {
+      composer.style.setProperty('--kbd-offset', `${offset}px`);
+    }
+  };
+
+  window.visualViewport.addEventListener('resize', adjustForKeyboard);
+  window.visualViewport.addEventListener('scroll', adjustForKeyboard);
+}
+
+/* ─── SCROLL TEXTAREA INTO VIEW ON FOCUS ────────── */
+(function() {
+  const textarea = document.getElementById('composerInput') || document.querySelector('.composer-textarea');
+  if (textarea) {
+    textarea.addEventListener('focus', () => {
+      setTimeout(() => {
+        textarea.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      }, 300);
+    });
+  }
+})();
 </script>
 <!-- ONBOARDING OVERLAY -->
     <div id="ob-overlay">
