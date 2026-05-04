@@ -1,4 +1,4 @@
-"""
+﻿"""
 Lightweight RAG pipeline for Vercel deployment.
 
 Uses scikit-learn TF-IDF instead of sentence-transformers + FAISS.
@@ -117,12 +117,22 @@ _text_vectors = [_tfidf_vec(t) for t in texts]
 print(f"[lite] Index ready with {len(texts)} entries (TF-IDF).")
 
 # ---------------------------------------------------------------------
-# INITIALIZE LLM CLIENT
+# INITIALIZE LLM CLIENT (values from prompt_config)
 # ---------------------------------------------------------------------
-API_KEY = "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"
+try:
+    from .prompt_config import API_KEY, BASE_URL, CHAT_MODEL, SUMMARY_MODEL
+    from .prompt_config import CHAT_TEMPERATURE, SUMMARY_TEMPERATURE
+    from .prompt_config import CHAT_MAX_TOKENS, SUMMARY_MAX_TOKENS
+    from .prompt_config import SUMMARY_PROMPT_TEMPLATE, CHAT_PROMPT_TEMPLATE
+except (ImportError, SystemError, ValueError):
+    from prompt_config import API_KEY, BASE_URL, CHAT_MODEL, SUMMARY_MODEL
+    from prompt_config import CHAT_TEMPERATURE, SUMMARY_TEMPERATURE
+    from prompt_config import CHAT_MAX_TOKENS, SUMMARY_MAX_TOKENS
+    from prompt_config import SUMMARY_PROMPT_TEMPLATE, CHAT_PROMPT_TEMPLATE
+
 client = OpenAI(
     api_key=API_KEY,
-    base_url="https://openrouter.ai/api/v1"
+    base_url=BASE_URL
 )
 
 # In-memory dictionary to track per-session summaries
@@ -192,31 +202,16 @@ def update_summary(chat_history: list[dict], previous_summary: str = "") -> str:
     for turn in chat_history[-6:]:
         history_text += f"User: {turn['user']}\n"
 
-    prompt = f"""
-Summarize the user's emotional state and situation.
-
-Rules:
-- Keep it very short (1–2 lines max)
-- Focus only on important emotional patterns (e.g., sadness, confusion, attachment)
-- Do NOT repeat the full conversation
-- Do NOT add new information
-- Just update what has already been observed
-
-Previous summary:
-{previous_summary}
-
-New conversation:
-{history_text}
-
-Updated summary:
-"""
+    prompt = SUMMARY_PROMPT_TEMPLATE.format(
+        prev_summary=previous_summary,
+        history_text=history_text
+    )
     try:
         response = client.chat.completions.create(
-            # Using the user's preferred model
-            model="qwen3-coder",
+            model=SUMMARY_MODEL,
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.3,
-            max_tokens=100
+            temperature=SUMMARY_TEMPERATURE,
+            max_tokens=SUMMARY_MAX_TOKENS
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
@@ -273,43 +268,16 @@ def generate_assistant_reply(
 
     checkin_block = checkin_context.strip() if isinstance(checkin_context, str) else ""
 
-    prompt = f"""{base_prompt}
-
----
-REPEAT COUNT: {repeat_count}
-
-USER STATE (IMPORTANT):
-{prev_summary}
-
----
-
-RECENT CHAT:
-{history_text}
-
----
-
-PERSISTENT MEMORY (from previous sessions, use naturally if relevant):
-{memory_context}
-
----
-
-USER-EDITABLE CHECK-IN CONTEXT (use as current self-described context; prioritize when relevant):
-{checkin_block}
-
----
-
-CONTEXT (use only if helpful):
-{context}
-
----
-
-USER:
-{last_user_query}
-
----
-
-REPLY:
-"""
+    prompt = CHAT_PROMPT_TEMPLATE.format(
+        system_prompt=base_prompt,
+        repeat_count=repeat_count,
+        prev_summary=prev_summary,
+        history_text=history_text,
+        memory_context=memory_context,
+        checkin_block=checkin_block,
+        context=context,
+        last_user_query=last_user_query
+    )
 
     try:
         # Override client if personal API key is provided
@@ -319,26 +287,26 @@ REPLY:
                 api_key=personal_api_key,
                 base_url="https://openrouter.ai/api/v1"
             )
-        
+
         response = active_client.chat.completions.create(
-            # Using qwen3-coder as confirmed by the user
-            model="qwen3-coder",
+            model=CHAT_MODEL,
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.8,
-            max_tokens=500
+            temperature=CHAT_TEMPERATURE,
+            max_tokens=CHAT_MAX_TOKENS
         )
         reply = response.choices[0].message.content.strip()
     except Exception as e:
         error_msg = f"API Error: {str(e)}"
         print(error_msg)
-        
+
         # Surface the actual error to the user if it's a known issue
         if "402" in str(e):
             reply = "I'm sorry, I'm hitting a credit limit on the current AI model. We might need to try a different free model or check the API key settings."
         elif "401" in str(e):
             reply = "There seems to be an issue with the API key authentication. Please double check your OpenRouter key."
         else:
-            reply = "I'm having a bit of trouble with my connection to the AI right now. (Ref: " + str(e)[:50] + "...)"
+            reply = 'I\'m having a bit of trouble with my connection to the AI right now. (Ref: ' + str(e)[:50] + '...)'
+
 
     # Process and save the summary
     chat_history.append({"user": last_user_query, "assistant": reply})
@@ -346,3 +314,4 @@ REPLY:
     session_summaries[sid] = new_summary
 
     return {"reply": reply, "summary": new_summary}
+
