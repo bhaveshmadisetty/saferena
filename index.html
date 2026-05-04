@@ -3397,6 +3397,14 @@ function populateSheet() {
     }
     const sheetSave = els.sheetContent.querySelector('#noteSaveSidebar');
     if (sheetSave) sheetSave.addEventListener('click', saveFutureNote);
+    // Restore saved note into the cloned textarea (innerHTML clone loses textarea values)
+    const sheetNoteText = els.sheetContent.querySelector('#noteTextSidebar');
+    if (sheetNoteText) {
+      try {
+        const saved = localStorage.getItem('ss_future_note');
+        if (saved) sheetNoteText.value = saved;
+      } catch(e) {}
+    }
   }
 }
 
@@ -3404,16 +3412,29 @@ function populateSheet() {
    SAVE FUTURE NOTE
 ───────────────────────────────────────── */
 function saveFutureNote() {
-  const text = els.noteTextSidebar.value.trim();
+  // On mobile the visible textarea is inside the sheet; on desktop it's in the sidebar
+  let textarea = els.noteTextSidebar;
+  if (STATE.bottomSheetOpen) {
+    const sheetTextarea = els.sheetContent.querySelector('#noteTextSidebar');
+    if (sheetTextarea) textarea = sheetTextarea;
+  }
+  const text = textarea.value.trim();
   if (!text) return;
-
-  // TODO: Send note to backend for future session retrieval
-  // await fetch('/api/note', { method:'POST', body: JSON.stringify({ note: text, guestId: getGuestId() }) });
 
   try { localStorage.setItem('ss_future_note', text); } catch(e) {}
 
-  els.noteSavedSidebar.classList.add('visible');
-  setTimeout(() => els.noteSavedSidebar.classList.remove('visible'), 3000);
+  // Keep both textareas in sync
+  if (textarea === els.noteTextSidebar) {
+    const sheetTextarea = els.sheetContent.querySelector('#noteTextSidebar');
+    if (sheetTextarea) sheetTextarea.value = text;
+  } else {
+    els.noteTextSidebar.value = text;
+  }
+
+  // Show saved confirmation in whichever note section is visible
+  const savedMsg = els.sheetContent.querySelector('#noteSavedSidebar') || els.noteSavedSidebar;
+  savedMsg.classList.add('visible');
+  setTimeout(() => savedMsg.classList.remove('visible'), 3000);
 }
 
 els.noteSaveSidebar.addEventListener('click', saveFutureNote);
