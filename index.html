@@ -1188,6 +1188,7 @@ body {
   .composer-inner { padding: 0 16px; }
   .msg-body { max-width: 85%; }
   .header-status { display: none; }
+  .header-brand { cursor: pointer; }
   /* Ensure textarea is interactive on mobile */
   .composer-textarea {
     font-size: 16px !important; /* Prevent iOS zoom on focus */
@@ -3358,6 +3359,14 @@ els.sheetOverlay.addEventListener('click', closeBottomSheet);
 const mobileSheetBtn = document.querySelector('.mobile-sheet-btn');
 if (mobileSheetBtn) {
   mobileSheetBtn.addEventListener('click', openBottomSheet);
+}
+
+// Open bottom sheet via logo click on mobile
+const headerBrand = document.querySelector('.header-brand');
+if (headerBrand) {
+  headerBrand.addEventListener('click', () => {
+    if (window.innerWidth <= 768) openBottomSheet();
+  });
 }
 
 // Clone sidebar into sheet on mobile
