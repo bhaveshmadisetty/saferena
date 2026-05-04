@@ -1041,9 +1041,14 @@ body {
   background: rgba(0,0,0,.4);
   z-index: 150;
   opacity: 0;
+  pointer-events: none;
   transition: opacity .3s ease;
 }
-.sheet-overlay.open { opacity: 1; }
+.sheet-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+  display: block;
+}
 
 .bottom-sheet {
   position: fixed;
@@ -1177,7 +1182,6 @@ body {
 /* ─── RESPONSIVE ─────────────────────────────────── */
 @media (max-width: 768px) {
   .sidebar { display: none; }
-  .sheet-overlay { display: block; }
   .bottom-sheet { display: flex; }
   .messages-inner { padding: 0 16px; }
   .composer-inner { padding: 0 16px; }
@@ -3276,19 +3280,6 @@ els.resetModalConfirm.addEventListener('click', () => {
 /* ─────────────────────────────────────────
    THEME TOGGLE
 ───────────────────────────────────────── */
-function updateThemeIcon(theme) {
-  const btn = document.getElementById('themeBtn');
-  if (!btn) return;
-
-  const moonSVG = '<svg id="themeIconDark" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 1a7 7 0 1 0 6 10.47A5 5 0 0 1 8 1z" fill="currentColor"/></svg>';
-  const sunSVG = '<svg id="themeIconLight" width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" style="display:none"><circle cx="8" cy="8" r="3" fill="currentColor"/><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3.22 3.22l1.06 1.06M11.72 11.72l1.06 1.06M11.72 4.28l-1.06 1.06M4.28 11.72l-1.06 1.06" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
-
-  btn.innerHTML = theme === 'dark' ? moonSVG : sunSVG;
-  btn.setAttribute('aria-label',
-    theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'
-  );
-}
-
 function toggleTheme() {
   try {
     STATE.theme = STATE.theme === 'dark' ? 'light' : 'dark';
@@ -3301,8 +3292,14 @@ function toggleTheme() {
     els.themeBtn.classList.add('rotating');
     setTimeout(() => els.themeBtn.classList.remove('rotating'), 450);
 
-    // Update icon
-    updateThemeIcon(STATE.theme);
+    // Swap icons - use original approach with display toggle
+    if (STATE.theme === 'light') {
+      els.themeIconDark.style.display = 'none';
+      els.themeIconLight.style.display = '';
+    } else {
+      els.themeIconDark.style.display = '';
+      els.themeIconLight.style.display = 'none';
+    }
 
     // Persist
     try { localStorage.setItem('ss_theme', STATE.theme); } catch(e) {}
@@ -3328,7 +3325,8 @@ try {
   if (saved && saved !== 'dark') {
     STATE.theme = saved;
     document.documentElement.setAttribute('data-theme', saved);
-    updateThemeIcon(saved);
+    els.themeIconDark.style.display = 'none';
+    els.themeIconLight.style.display = '';
   }
 } catch(e) {}
 
