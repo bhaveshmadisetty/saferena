@@ -1183,6 +1183,7 @@ body {
 @media (max-width: 768px) {
   .sidebar { display: none; }
   .bottom-sheet { display: flex; }
+  .mobile-bar { display: flex; }
   .messages-inner { padding: 0 16px; }
   .composer-inner { padding: 0 16px; }
   .msg-body { max-width: 85%; }
@@ -3352,6 +3353,12 @@ function closeBottomSheet() {
 }
 
 els.sheetOverlay.addEventListener('click', closeBottomSheet);
+
+// Open bottom sheet from mobile bar button
+const mobileSheetBtn = document.querySelector('.mobile-sheet-btn');
+if (mobileSheetBtn) {
+  mobileSheetBtn.addEventListener('click', openBottomSheet);
+}
 
 // Clone sidebar into sheet on mobile
 function populateSheet() {
