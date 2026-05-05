@@ -152,7 +152,7 @@ def chat():
                 except Exception as e:
                     print(f"[cheat] Error applying cheat code: {e}")
                 
-                reply_text = "*(System override accepted)* \n\nAccess restrictions lifted. You have unlimited access. How can I help you today?"
+                reply_text = "Access restrictions lifted. You have unlimited access. How can I help you today?"
                 if _memory_available:
                     try: mem.save_message(guest_id, "assistant", reply_text)
                     except: pass

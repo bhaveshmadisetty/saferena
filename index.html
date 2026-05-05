@@ -3019,10 +3019,6 @@ async function sendMessage() {
       STATE.messagesHistory.push({ role: 'assistant', content: reply });
       replyLines = reply.split('\n');
       
-      // Override local quota if cheat code was accepted
-      if (reply.includes("*(System override accepted)*")) {
-         STATE.msgCount = -999999;
-      }
   } catch(e) {
       console.error(e);
       replyLines = ["Sorry, I\'m having trouble connecting right now."];
@@ -3033,7 +3029,7 @@ async function sendMessage() {
 
   const sessionClosedReply = replyText.includes('This session has reached its natural close');
 
-  if (!STATE.hasPersonalKey && !replyText.includes('*(System override accepted)*')) {
+  if (!STATE.hasPersonalKey) {
     const synced = await syncQuotaFromServer();
     if (sessionClosedReply) {
       STATE.msgCount = Math.max(STATE.msgCount, STATE.MAX_MSGS);

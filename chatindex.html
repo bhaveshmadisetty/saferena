@@ -2414,7 +2414,7 @@ async function sendMessage() {
     enableInput();
 
     // If we're using a personal key, we don't increment local count (the backend handles its own logic)
-    if (!localStorage.getItem(STORAGE_PERSONAL_KEY) && !replyText.includes('*(System override accepted)*')) {
+    if (!localStorage.getItem(STORAGE_PERSONAL_KEY)) {
         // STATE.msgCount incremented at start of function
     }
 
