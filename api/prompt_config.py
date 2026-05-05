@@ -31,11 +31,11 @@ BASE_URL = os.environ.get(
 )
 
 # ── MODEL CONFIGURATION ────────────────────────
-CHAT_MODEL = os.environ.get("CHAT_MODEL", "deepseek/deepseek-v4-pro")
-SUMMARY_MODEL = os.environ.get("SUMMARY_MODEL", "deepseek/deepseek-v4-pro")
-CHAT_TEMPERATURE = float(os.environ.get("CHAT_TEMPERATURE", "0.8"))
+CHAT_MODEL = os.environ.get("CHAT_MODEL", "deepseek/deepseek-chat")
+SUMMARY_MODEL = os.environ.get("SUMMARY_MODEL", "deepseek/deepseek-chat")
+CHAT_TEMPERATURE = float(os.environ.get("CHAT_TEMPERATURE", "0.7"))
 SUMMARY_TEMPERATURE = float(os.environ.get("SUMMARY_TEMPERATURE", "0.3"))
-CHAT_MAX_TOKENS = int(os.environ.get("CHAT_MAX_TOKENS", "500"))
+CHAT_MAX_TOKENS = int(os.environ.get("CHAT_MAX_TOKENS", "200"))
 SUMMARY_MAX_TOKENS = int(os.environ.get("SUMMARY_MAX_TOKENS", "100"))
 
 # ── BASE SYSTEM PROMPT (shared across all sessions) ────────
