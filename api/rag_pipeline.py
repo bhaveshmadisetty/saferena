@@ -198,6 +198,10 @@ def generate_assistant_reply(
     for turn in chat_history[-3:]:
         history_text += f"[MEMORY]\nUSER: {turn['user']}\nASSISTANT: {turn['assistant']}\n\n"
 
+    # Extract last 3 bot replies for variety enforcement
+    last_3_assistant = [turn["assistant"] for turn in chat_history[-3:] if "assistant" in turn]
+    last_3_replies = "\n".join(last_3_assistant) if last_3_assistant else "None yet."
+
     from api.user_context import build_system_prompt_v2
     base_prompt = build_system_prompt_v2(guest_id)
 
@@ -211,7 +215,8 @@ def generate_assistant_reply(
         memory_context=memory_context,
         checkin_block=checkin_block,
         context=context,
-        last_user_query=last_user_query
+        last_user_query=last_user_query,
+        last_3_replies=last_3_replies
     )
 
     try:

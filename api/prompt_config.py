@@ -35,7 +35,7 @@ CHAT_MODEL = os.environ.get("CHAT_MODEL", "deepseek/deepseek-chat")
 SUMMARY_MODEL = os.environ.get("SUMMARY_MODEL", "deepseek/deepseek-chat")
 CHAT_TEMPERATURE = float(os.environ.get("CHAT_TEMPERATURE", "0.7"))
 SUMMARY_TEMPERATURE = float(os.environ.get("SUMMARY_TEMPERATURE", "0.3"))
-CHAT_MAX_TOKENS = int(os.environ.get("CHAT_MAX_TOKENS", "80"))
+CHAT_MAX_TOKENS = int(os.environ.get("CHAT_MAX_TOKENS", "110"))
 SUMMARY_MAX_TOKENS = int(os.environ.get("SUMMARY_MAX_TOKENS", "100"))
 
 # ── BASE SYSTEM PROMPT (shared across all sessions) ───────────────────────────
@@ -298,6 +298,11 @@ CONTEXT (use only if helpful):
 
 USER:
 {last_user_query}
+
+---
+
+LAST 3 BOT REPLIES (study these carefully — your next reply MUST be structurally different from all of them):
+{last_3_replies}
 
 ---
 
