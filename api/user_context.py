@@ -37,6 +37,7 @@ try:
         SESSION_PROGRESS_FINAL,
         HIGH_INTENSITY_RULE,
         CUSTOM_SYSTEM_PROMPTS,
+        assemble_system_prompt,
     )
 except ImportError:
     # Fallback defaults if prompt_config.py is missing
@@ -252,8 +253,11 @@ def build_system_prompt_v2(guest_id: str) -> str:
 
     path = ctx.get("path", "deep")
     q1 = ctx.get("q1_situation", "")
+    q2 = ctx.get("q2_duration", "")
+    q3 = ctx.get("q3_root_cause", "")
     q5 = ctx.get("q5_support_need", "")
     name = ctx.get("first_name")
+    msg_count = ctx.get("session_msg_count", 0)
 
     # Check for custom prompt for this (path, q5) combination
     q5_lower = q5.lower()
@@ -261,54 +265,5 @@ def build_system_prompt_v2(guest_id: str) -> str:
         if cp_path == path and cp_q5_substring in q5_lower:
             return custom_prompt
 
-    # Build default prompt
-    context_block = f"""
-[SILENT USER CONTEXT — use naturally, never reference directly]
-Session type: {path.upper()} PATH
-Situation: {q1}
-"""
-
-    if path == "deep":
-        q2 = ctx.get("q2_duration", "")
-        q3 = ctx.get("q3_root_cause", "")
-        context_block += f"""Duration: {q2}
-Root cause (their words): {q3}
-Support needed: {q5}
-{"Name: " + name if name else "Name: unknown — extract if shared"}
-"""
-        context_block += "\nCONVERSATION STYLE:\n"
-        context_block += DEEP_CONVERSATION_STYLE + "\n"
-
-        if q5:
-            for key_substring, directive_text in DEEP_SUPPORT_DIRECTIVES.items():
-                if key_substring in q5_lower:
-                    context_block += f"\nSUPPORT DIRECTIVE: {directive_text}\n"
-                    break
-
-    else:
-        q2_general = ctx.get("q2_duration", "")
-        context_block += f"""Current mood: {q2_general}
-Tone preference: {q5}
-{"Name: " + name if name else "Name: unknown — extract if shared"}
-"""
-        context_block += "\nCONVERSATION STYLE:\n"
-        context_block += GENERAL_CONVERSATION_STYLE + "\n"
-
-        if q5:
-            for key_substring, directive_text in GENERAL_TONE_DIRECTIVES.items():
-                if key_substring in q5_lower:
-                    context_block += f"\nTONE DIRECTIVE: {directive_text}\n"
-                    break
-
-    count = ctx.get("session_msg_count", 0)
-    if 10 <= count < 12:
-        context_block += f"\n⚠️ {SESSION_PROGRESS_NEAR.format(count=count)}\n"
-    elif 12 <= count < 15:
-        remaining = 15 - count
-        context_block += f"\n⚠️ {SESSION_PROGRESS_VERY_NEAR.format(count=count, remaining=remaining)}\n"
-    elif count >= 15:
-        context_block += f"\n⚠️ {SESSION_PROGRESS_FINAL}\n"
-
-    context_block += f"\n{HIGH_INTENSITY_RULE}\n"
-
-    return BASE_SYSTEM_PROMPT + context_block
+    # Use the efficient assembler from prompt_config
+    return assemble_system_prompt(path, q1, q2, q3, q5, name, msg_count)
