@@ -3643,22 +3643,6 @@ els.gateRemindBtn.addEventListener('click', () => {
   }, 1200);
 });
 
-/* ─────────────────────────────────────────
-   RESET SESSION
-───────────────────────────────────────── */
-els.resetBtn.addEventListener('click', () => {
-  if (!confirm('Clear this session? Your conversation will be removed.')) return;
-  try {
-    sessionStorage.clear();
-    localStorage.removeItem('ss_future_note');
-    localStorage.removeItem(STORAGE_MSG_COUNT);
-    localStorage.removeItem(STORAGE_LOCKED_UNTIL);
-    localStorage.removeItem('ss_personal_key');
-    localStorage.removeItem('ss_guest_id');
-    document.cookie = 'guest_id=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax';
-  } catch(e) {}
-  location.reload();
-});
 
 /* ─────────────────────────────────────────
    COMPOSER INPUT EVENTS
