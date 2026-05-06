@@ -112,6 +112,19 @@ def api_history(guest_id):
         print(f"[history] Error: {e}")
         return jsonify({"history": []})
 
+@app.route("/api/history-encrypted/<guest_id>", methods=["GET", "OPTIONS"])
+def api_history_encrypted(guest_id):
+    """E2EE: Return encrypted message blobs for client-side decryption."""
+    if request.method == "OPTIONS": return "", 204
+    if not _memory_available:
+        return jsonify({"encryptedMessages": []})
+    try:
+        encrypted = mem.load_encrypted_messages(guest_id, limit=30)
+        return jsonify({"encryptedMessages": encrypted})
+    except Exception as e:
+        print(f"[history-encrypted] Error: {e}")
+        return jsonify({"encryptedMessages": []})
+
 @app.route("/api/chat", methods=["POST", "OPTIONS"])
 def chat():
     if request.method == "OPTIONS":
@@ -122,6 +135,8 @@ def chat():
     session_id = payload.get("sessionId")
     guest_id = payload.get("guestId", "")  # NEW: read guest_id from payload
     personal_api_key = payload.get("personal_api_key", "")
+    encrypted_message = payload.get("encryptedMessage", None)  # E2EE: encrypted user msg blob
+    allow_training = payload.get("allowTraining", False)        # E2EE: opt-in for training data
 
     if not isinstance(messages, list):
         return jsonify({"error": "'messages' must be an array"}), 400
@@ -213,6 +228,32 @@ def chat():
                     mem.save_message(guest_id, "assistant", reply)
                 except Exception as mem_err:
                     print(f"[memory] Non-fatal save error: {mem_err}")
+
+                # ---- E2EE: Save encrypted user message blob ----
+                if encrypted_message:
+                    try:
+                        enc_content = encrypted_message.get("content", {})
+                        mem.save_encrypted_message(
+                            guest_id,
+                            encrypted_message.get("role", "user"),
+                            json.dumps(enc_content) if isinstance(enc_content, dict) else str(enc_content)
+                        )
+                    except Exception as enc_err:
+                        print(f"[e2ee] Non-fatal encrypted save error: {enc_err}")
+
+                # ---- E2EE: Save training copy (opt-in ONLY) ----
+                if allow_training:
+                    try:
+                        last_user_msg_for_training = ""
+                        for m in reversed(messages):
+                            if m.get("role") == "user":
+                                last_user_msg_for_training = m.get("content", "")
+                                break
+                        if last_user_msg_for_training:
+                            mem.save_training_copy(guest_id, "user", last_user_msg_for_training)
+                        mem.save_training_copy(guest_id, "assistant", reply)
+                    except Exception as train_err:
+                        print(f"[training] Non-fatal training save error: {train_err}")
             
             # Increment quota ONLY after successful generation
             if not personal_api_key:
@@ -227,6 +268,29 @@ def chat():
     except Exception as exc:
         print(f"Server error: {exc}")
         return jsonify({"error": "Internal server error", "details": str(exc)}), 500
+
+@app.route("/api/encrypted-save", methods=["POST", "OPTIONS"])
+def api_encrypted_save():
+    """E2EE: Save an encrypted message blob without triggering LLM inference."""
+    if request.method == "OPTIONS": return "", 204
+    payload = request.get_json(silent=True) or {}
+    guest_id = payload.get("guestId", "")
+    encrypted_message = payload.get("encryptedMessage", None)
+
+    if not guest_id or not encrypted_message or not _memory_available:
+        return jsonify({"success": False}), 400
+
+    try:
+        enc_content = encrypted_message.get("content", {})
+        mem.save_encrypted_message(
+            guest_id,
+            encrypted_message.get("role", "user"),
+            json.dumps(enc_content) if isinstance(enc_content, dict) else str(enc_content)
+        )
+        return jsonify({"success": True})
+    except Exception as e:
+        print(f"[encrypted-save] Error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))

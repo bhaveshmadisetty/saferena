@@ -16,13 +16,16 @@ class handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         try:
-            # Parse guest_id from path /api/history/{guest_id}
+            # Parse guest_id from path /api/history/{guest_id} or /api/history-encrypted/{guest_id}
             path_parts = self.path.split("?")
             url_path = path_parts[0]
             parts = url_path.strip("/").split("/")
             guest_id = parts[-1] if len(parts) > 2 else None
 
-            if not guest_id or guest_id == "history":
+            # Detect if this is an encrypted history request
+            is_encrypted = "history-encrypted" in url_path
+
+            if not guest_id or guest_id in ("history", "history-encrypted"):
                 self._json_response(400, {"error": "Missing guest_id"})
                 return
 
@@ -34,12 +37,21 @@ class handler(BaseHTTPRequestHandler):
                 mem = None
 
             if not _memory_available:
-                self._json_response(200, {"history": []})
+                if is_encrypted:
+                    self._json_response(200, {"encryptedMessages": []})
+                else:
+                    self._json_response(200, {"history": []})
                 return
 
-            recent = mem.load_recent_messages(guest_id, limit=30)
-            history = [{"role": m["role"], "content": m["message"]} for m in reversed(recent)]
-            self._json_response(200, {"history": history})
+            if is_encrypted:
+                # E2EE: Return encrypted blobs for client-side decryption
+                encrypted = mem.load_encrypted_messages(guest_id, limit=30)
+                self._json_response(200, {"encryptedMessages": encrypted})
+            else:
+                # Legacy: Return plaintext history
+                recent = mem.load_recent_messages(guest_id, limit=30)
+                history = [{"role": m["role"], "content": m["message"]} for m in reversed(recent)]
+                self._json_response(200, {"history": history})
 
         except Exception as exc:
             tb = traceback.format_exc()

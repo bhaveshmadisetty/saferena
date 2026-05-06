@@ -123,6 +123,7 @@ def save_intake_v2(guest_id: str, data: dict):
         "first_name":      data.get("first_name", ""),
         "session_msg_count": 0,
         "is_locked": False,
+        "allow_training":  data.get("allow_training", False),  # E2EE opt-in for model improvement
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
 
@@ -191,6 +192,14 @@ def increment_msg_count(guest_id: str):
         )
     except Exception as e:
         print(f"[user_context] increment_msg_count error: {e}")
+
+def get_training_preference(guest_id: str) -> bool:
+    """Check if a user opted in to share plaintext for model training."""
+    ctx = get_context(guest_id)
+    if not ctx:
+        return False
+    return bool(ctx.get("allow_training", False))
+
 
 def reset_context(guest_id: str):
     if not is_enabled() or not guest_id:

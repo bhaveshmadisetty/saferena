@@ -111,6 +111,95 @@ def load_recent_messages(guest_id: str, limit: int = 10) -> list[dict]:
 # ---------------------------------------------------------------------------
 # FORMAT: Convert messages list into a text block for prompt injection
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# WRITE: Save encrypted message blob (E2EE — server CANNOT decrypt)
+# ---------------------------------------------------------------------------
+def save_encrypted_message(guest_id: str, role: str, encrypted_content: str) -> None:
+    """
+    Save an encrypted message blob to chat_messages_encrypted.
+    The encrypted_content is a JSON string containing {iv, data, timestamp}.
+    The server never has the decryption key — only the user's browser does.
+    """
+    if not is_enabled() or not guest_id:
+        return
+    try:
+        _get_client().post(
+            f"{_REST_URL}/chat_messages_encrypted",
+            headers=_HEADERS,
+            json={
+                "guest_id": guest_id,
+                "role": role,
+                "encrypted_content": encrypted_content,
+            },
+        )
+    except Exception as e:
+        print(f"[memory] save_encrypted_message error: {e}")
+
+
+# ---------------------------------------------------------------------------
+# READ: Load encrypted messages for client-side decryption
+# ---------------------------------------------------------------------------
+def load_encrypted_messages(guest_id: str, limit: int = 30) -> list[dict]:
+    """
+    Fetch encrypted message blobs for a guest_id.
+    The caller (browser) must decrypt using the user's local key.
+    """
+    if not is_enabled() or not guest_id:
+        return []
+    try:
+        import datetime
+        seven_days_ago = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=7)).isoformat()
+
+        resp = _get_client().get(
+            f"{_REST_URL}/chat_messages_encrypted",
+            headers={**_HEADERS, "Prefer": ""},
+            params={
+                "guest_id": f"eq.{guest_id}",
+                "created_at": f"gte.{seven_days_ago}",
+                "order": "created_at.desc",
+                "limit": str(limit),
+                "select": "role,encrypted_content",
+            },
+        )
+        if resp.status_code == 200:
+            rows = resp.json()
+            rows.reverse()  # oldest first
+            return rows
+        else:
+            print(f"[memory] load_encrypted_messages status {resp.status_code}: {resp.text[:200]}")
+            return []
+    except Exception as e:
+        print(f"[memory] load_encrypted_messages error: {e}")
+        return []
+
+
+# ---------------------------------------------------------------------------
+# WRITE: Save plaintext copy for model training (OPT-IN ONLY)
+# ---------------------------------------------------------------------------
+def save_training_copy(guest_id: str, role: str, message: str) -> None:
+    """
+    Save a plaintext copy to the training_data table.
+    This is ONLY called for users who explicitly opted in during onboarding.
+    """
+    if not is_enabled() or not guest_id or not message:
+        return
+    try:
+        _get_client().post(
+            f"{_REST_URL}/training_data",
+            headers=_HEADERS,
+            json={
+                "guest_id": guest_id,
+                "role": role,
+                "message": message,
+            },
+        )
+    except Exception as e:
+        print(f"[memory] save_training_copy error: {e}")
+
+
+# ---------------------------------------------------------------------------
+# FORMAT: Convert messages list into a text block for prompt injection
+# ---------------------------------------------------------------------------
 def format_memory_context(messages: list[dict]) -> str:
     """
     Format Supabase messages into a text block suitable for prompt injection.

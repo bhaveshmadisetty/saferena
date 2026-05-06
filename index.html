@@ -2532,6 +2532,272 @@
       max-height: 80vh;
       max-height: 80dvh;
     }
+
+    /* ─── BUG REPORT WIDGET ─── */
+    :root,[data-theme="light"]{
+      --bw-color-bg:#f7f6f2;
+      --bw-color-surface:#f9f8f5;
+      --bw-color-surface-2:#ffffff;
+      --bw-color-surface-offset:#f3f0ec;
+      --bw-color-border:rgba(0,0,0,0.10);
+      --bw-color-divider:#dcd9d5;
+      --bw-color-text:#28251d;
+      --bw-color-text-muted:#7a7974;
+      --bw-color-text-faint:#bab9b4;
+      --bw-color-text-inverse:#f9f8f4;
+      --bw-color-primary:#01696f;
+      --bw-color-primary-hover:#0c4e54;
+      --bw-color-primary-highlight:#cedcd8;
+      --bw-shadow-sm:0 1px 3px rgba(0,0,0,0.08);
+      --bw-shadow-md:0 4px 16px rgba(0,0,0,0.10);
+      --bw-shadow-lg:0 16px 48px rgba(0,0,0,0.14);
+      --bw-shadow-xl:0 24px 64px rgba(0,0,0,0.18);
+      --bw-radius-sm:6px;
+      --bw-radius-md:10px;
+      --bw-radius-lg:16px;
+      --bw-radius-xl:20px;
+      --bw-radius-full:9999px;
+      --bw-transition:180ms cubic-bezier(0.16,1,0.3,1);
+    }
+    [data-theme="dark"]{
+      --bw-color-bg:#0f0e0d;
+      --bw-color-surface:#171614;
+      --bw-color-surface-2:#1e1d1b;
+      --bw-color-surface-offset:#1a1917;
+      --bw-color-border:rgba(255,255,255,0.08);
+      --bw-color-divider:#2a2927;
+      --bw-color-text:#cdccca;
+      --bw-color-text-muted:#797876;
+      --bw-color-text-faint:#4a4947;
+      --bw-color-primary:#4f98a3;
+      --bw-color-primary-hover:#227f8b;
+      --bw-color-primary-highlight:#1e3438;
+      --bw-shadow-sm:0 1px 3px rgba(0,0,0,0.30);
+      --bw-shadow-md:0 4px 16px rgba(0,0,0,0.40);
+      --bw-shadow-lg:0 16px 48px rgba(0,0,0,0.50);
+      --bw-shadow-xl:0 24px 64px rgba(0,0,0,0.60);
+    }
+
+    #bugFab{
+      position:fixed;bottom:1.5rem;right:1.5rem;z-index:200;
+      display:flex;align-items:center;gap:0.5rem;
+      padding:0.625rem 1rem;
+      background:var(--bw-color-surface-2);
+      border:1px solid var(--bw-color-border);
+      border-radius:var(--bw-radius-full);
+      box-shadow:var(--bw-shadow-md);
+      font-size:0.8125rem;font-weight:500;
+      color:var(--bw-color-text-muted);
+      cursor:pointer;
+      user-select:none;
+      transition:color var(--bw-transition),background var(--bw-transition),
+                 border-color var(--bw-transition),box-shadow var(--bw-transition),
+                 opacity var(--bw-transition),transform var(--bw-transition);
+    }
+    #bugFab:hover{
+      background:var(--bw-color-surface-offset);
+      color:var(--bw-color-text);
+      box-shadow:var(--bw-shadow-lg);
+      transform:translateY(-1px);
+    }
+    #bugFab:active{transform:translateY(0);box-shadow:var(--bw-shadow-sm)}
+    #bugFab svg{width:15px;height:15px;flex-shrink:0}
+
+    @media(max-width:768px){
+      #bugFab{
+        padding: 0.75rem;
+        bottom: 8rem;
+        right: 1.25rem;
+        box-shadow:var(--bw-shadow-sm);
+      }
+      .bug-fab-text{
+        display:none;
+      }
+    }
+
+    #bugBackdrop{
+      position:fixed;inset:0;z-index:300;
+      background:rgba(0,0,0,0.55);
+      backdrop-filter:blur(6px);
+      -webkit-backdrop-filter:blur(6px);
+      opacity:0;pointer-events:none;
+      transition:opacity 220ms ease;
+    }
+    #bugBackdrop.open{opacity:1;pointer-events:all}
+
+    #bugModal{
+      position:fixed;z-index:400;
+      left:50%;bottom:0;
+      transform:translateX(-50%) translateY(100%);
+      width:min(480px,100vw);
+      background:var(--bw-color-surface);
+      border:1px solid var(--bw-color-border);
+      border-bottom:none;
+      border-radius:var(--bw-radius-xl) var(--bw-radius-xl) 0 0;
+      box-shadow:var(--bw-shadow-xl);
+      padding:0;
+      transition:transform 300ms cubic-bezier(0.16,1,0.3,1);
+      overflow:hidden;
+    }
+    @media(min-width:540px){
+      #bugModal{
+        bottom:auto;
+        top:50%;left:50%;
+        transform:translate(-50%,-50%) scale(0.96);
+        border-radius:var(--bw-radius-xl);
+        border-bottom:1px solid var(--bw-color-border);
+        opacity:0;
+        transition:transform 280ms cubic-bezier(0.16,1,0.3,1),opacity 220ms ease;
+      }
+    }
+    #bugBackdrop.open #bugModal{
+      transform:translateX(-50%) translateY(0);
+    }
+    @media(min-width:540px){
+      #bugBackdrop.open #bugModal{
+        transform:translate(-50%,-50%) scale(1);
+        opacity:1;
+      }
+    }
+
+    .bug-modal-handle{
+      display:block;margin:0.75rem auto 0;
+      width:36px;height:4px;
+      border-radius:var(--bw-radius-full);
+      background:var(--bw-color-divider);
+    }
+    @media(min-width:540px){.bug-modal-handle{display:none}}
+
+    .bug-modal-inner{padding:1.5rem 1.5rem 2rem}
+    @media(min-width:540px){.bug-modal-inner{padding:2rem 2rem 2rem}}
+
+    .bug-modal-header{
+      display:flex;align-items:flex-start;justify-content:space-between;
+      gap:1rem;margin-bottom:0.5rem;
+    }
+    .bug-modal-icon{
+      width:40px;height:40px;flex-shrink:0;
+      border-radius:var(--bw-radius-md);
+      background:var(--bw-color-primary-highlight);
+      display:flex;align-items:center;justify-content:center;
+      color:var(--bw-color-primary);
+    }
+    .bug-modal-icon svg{width:18px;height:18px}
+    .bug-modal-close{
+      width:30px;height:30px;flex-shrink:0;margin-top:0.25rem;
+      border-radius:var(--bw-radius-sm);
+      display:flex;align-items:center;justify-content:center;
+      color:var(--bw-color-text-muted);
+      cursor:pointer;background:none;border:none;
+      transition:color var(--bw-transition),background var(--bw-transition);
+    }
+    .bug-modal-close:hover{background:var(--bw-color-surface-offset);color:var(--bw-color-text)}
+    .bug-modal-close svg{width:16px;height:16px}
+
+    .bug-modal-title{
+      font-size:1.125rem;font-weight:700;
+      color:var(--bw-color-text);letter-spacing:-0.01em;
+      line-height:1.3;
+      flex:1;
+      margin:0;
+    }
+    .bug-modal-body{
+      font-size:0.875rem;color:var(--bw-color-text-muted);
+      line-height:1.65;margin-bottom:1.5rem;max-width:54ch;
+    }
+    .bug-modal-body strong{color:var(--bw-color-text);font-weight:500}
+
+    .bug-modal-divider{
+      height:1px;background:var(--bw-color-divider);
+      margin:0 -1.5rem 1.5rem;
+    }
+    @media(min-width:540px){.bug-modal-divider{margin:0 -2rem 1.5rem}}
+
+    .bug-modal-actions{display:flex;flex-direction:column;gap:0.75rem}
+
+    .bug-btn-primary{
+      display:flex;align-items:center;justify-content:center;gap:0.5rem;
+      width:100%;padding:0.75rem 1.25rem;
+      background:var(--bw-color-primary);
+      color:#fff;
+      border-radius:var(--bw-radius-md);
+      font-size:0.875rem;font-weight:600;
+      text-decoration:none;
+      border:none;
+      box-shadow:0 1px 2px rgba(0,0,0,0.12),0 4px 12px rgba(1,105,111,0.25);
+      transition:color var(--bw-transition),background var(--bw-transition),box-shadow var(--bw-transition),transform var(--bw-transition);
+    }
+    .bug-btn-primary:hover{
+      background:var(--bw-color-primary-hover);
+      box-shadow:0 2px 4px rgba(0,0,0,0.16),0 8px 20px rgba(1,105,111,0.30);
+      transform:translateY(-1px);
+      color:#fff;
+    }
+    .bug-btn-primary:active{transform:translateY(0);color:#fff}
+    .bug-btn-primary svg{width:16px;height:16px;flex-shrink:0}
+
+    .bug-btn-secondary{
+      display:flex;align-items:center;justify-content:center;gap:0.5rem;
+      width:100%;padding:0.75rem 1.25rem;
+      background:transparent;
+      color:var(--bw-color-text);
+      border-radius:var(--bw-radius-md);
+      font-size:0.875rem;font-weight:500;
+      text-decoration:none;
+      border:1px solid var(--bw-color-border);
+      transition:color var(--bw-transition),background var(--bw-transition),border-color var(--bw-transition);
+    }
+    .bug-btn-secondary:hover{
+      background:var(--bw-color-surface-offset);
+      border-color:rgba(0,0,0,0.16);
+    }
+    .bug-btn-secondary svg{width:16px;height:16px;flex-shrink:0;color:var(--bw-color-text-muted)}
+
+    .bug-btn-ghost{
+      display:block;text-align:center;
+      font-size:0.8125rem;color:var(--bw-color-text-faint);
+      padding:0.25rem;border-radius:var(--bw-radius-sm);
+      text-decoration:none;background:none;border:none;width:100%;
+      cursor:pointer;
+      transition:color var(--bw-transition);
+    }
+    .bug-btn-ghost:hover{color:var(--bw-color-text-muted)}
+
+    .bug-modal-hint{
+      font-size:0.75rem;
+      color:#92700a;
+      line-height:1.6;
+      margin-top:1rem;
+      padding:0.75rem 0.875rem;
+      background:#fef9ec;
+      border-radius:var(--bw-radius-sm);
+      border:1px solid #f0c040;
+    }
+    [data-theme="dark"] .bug-modal-hint{
+      color:#d4a820;
+      background:#2a2310;
+      border-color:#5a4a10;
+    }
+    .bug-modal-hint strong{font-weight:600}
+
+    #bugToast{
+      position:fixed;bottom:5rem;left:50%;
+      transform:translateX(-50%) translateY(8px);
+      z-index:500;
+      background:var(--bw-color-surface-2);
+      border:1px solid var(--bw-color-border);
+      border-radius:var(--bw-radius-full);
+      padding:0.5rem 1rem;
+      font-size:0.8125rem;font-weight:500;
+      color:var(--bw-color-text);
+      box-shadow:var(--bw-shadow-lg);
+      display:flex;align-items:center;gap:0.5rem;
+      opacity:0;pointer-events:none;
+      transition:opacity 200ms ease,transform 200ms ease;
+      white-space:nowrap;
+    }
+    #bugToast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+    #bugToast svg{width:15px;height:15px;color:#437a22}
   </style>
 </head>
 
@@ -2903,6 +3169,97 @@
           Key</button>
       </div>
     </div>
+  </div>
+
+  <!-- ═══ BUG REPORT WIDGET ═══ -->
+  <button id="bugFab" aria-label="Report a bug" aria-haspopup="dialog">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 22c-4.97 0-9-4.03-9-9v-1l.93-3.72"/>
+      <path d="M12 22c4.97 0 9-4.03 9-9v-1l-.93-3.72"/>
+      <path d="M12 13v4"/>
+      <path d="M9 3h6"/>
+      <path d="M3 9h3.5"/>
+      <path d="M17.5 9H21"/>
+      <path d="M3 15h3.5"/>
+      <path d="M17.5 15H21"/>
+      <circle cx="12" cy="9" r="3"/>
+    </svg>
+    <span class="bug-fab-text">Something broken?</span>
+  </button>
+
+  <div id="bugBackdrop" role="dialog" aria-modal="true" aria-labelledby="bugModalTitle">
+    <div id="bugModal">
+      <span class="bug-modal-handle" aria-hidden="true"></span>
+      <div class="bug-modal-inner">
+
+        <div class="bug-modal-header">
+          <div class="bug-modal-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22c-4.97 0-9-4.03-9-9v-1l.93-3.72"/>
+              <path d="M12 22c4.97 0 9-4.03 9-9v-1l-.93-3.72"/>
+              <circle cx="12" cy="9" r="3"/>
+            </svg>
+          </div>
+          <h2 class="bug-modal-title" id="bugModalTitle">Notice something off?</h2>
+          <button class="bug-modal-close" id="bugModalClose" aria-label="Close bug report dialog">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+
+        <p class="bug-modal-body">
+          We're constantly making Saferena better, and your eyes help more than you know.<br><br>
+          <strong>Take a quick screenshot</strong> of what went wrong, then fire it over. Two taps and you're done.
+        </p>
+
+        <div class="bug-modal-divider" aria-hidden="true"></div>
+
+        <div class="bug-modal-actions">
+          <a id="bugGmailBtn"
+             href="mailto:bhaveshmadisetty@gmail.com?subject=Bug%20found%20on%20Saferena&body=Hey%20Bhavesh%2C%0A%0AI%20ran%20into%20a%20small%20issue%20on%20Saferena%20and%20wanted%20to%20flag%20it.%0A%0APage%20/%20section%3A%0A(e.g.%20Dashboard%2C%20Chat%2C%20Settings)%0A%0AWhat%20I%20expected%3A%0A%0AWhat%20actually%20happened%3A%0A%0ADevice%20and%20browser%3A%0A(e.g.%20Android%20Chrome%2C%20iPhone%20Safari%2C%20Windows%20Edge)%0A%0AAttaching%20a%20screenshot%20below%20if%20I%20have%20one.%0A%0AThanks!"
+             class="bug-btn-primary"
+             target="_blank"
+             rel="noopener noreferrer"
+             aria-label="Open email client to report this bug">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="4" width="20" height="16" rx="2"/>
+              <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+            </svg>
+            Open email to report bug
+          </a>
+
+          <a id="bugGmailDirectBtn"
+             href="https://mail.google.com/mail/?view=cm&fs=1&to=bhaveshmadisetty%40gmail.com&su=Bug%20found%20on%20Saferena&body=Hey%20Bhavesh%2C%0A%0AI%20ran%20into%20a%20small%20issue%20on%20Saferena%20and%20wanted%20to%20flag%20it.%0A%0APage%20/%20section%3A%0A(e.g.%20Dashboard%2C%20Chat%2C%20Settings)%0A%0AWhat%20I%20expected%3A%0A%0AWhat%20actually%20happened%3A%0A%0ADevice%20and%20browser%3A%0A(e.g.%20Android%20Chrome%2C%20iPhone%20Safari%2C%20Windows%20Edge)%0A%0AAttaching%20a%20screenshot%20below%20if%20I%20have%20one.%0A%0AThanks!"
+             class="bug-btn-secondary"
+             target="_blank"
+             rel="noopener noreferrer"
+             aria-label="Open Gmail to report this bug">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+              <polyline points="10 17 15 12 10 7"/>
+              <line x1="15" y1="12" x2="3" y2="12"/>
+            </svg>
+            Open in Gmail instead
+          </a>
+
+          <button class="bug-btn-ghost" id="bugCancelBtn">Not now</button>
+        </div>
+
+        <div class="bug-modal-hint" role="note" aria-label="Tip">
+          <strong>Quick tip:</strong> Got a screenshot? Attach it to the email. It helps us find the exact issue and fix it faster.
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div id="bugToast" role="status" aria-live="polite">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="20 6 9 17 4 12"/>
+    </svg>
+    Thanks for helping make Saferena better
   </div>
 
   <!-- ═══ MOBILE BOTTOM SHEET ═══ -->
@@ -5452,6 +5809,52 @@
       }
 
     })(); // end IIFE
+
+    /* ─── BUG REPORT WIDGET LOGIC ─── */
+    (function(){
+      const fab      = document.getElementById('bugFab');
+      const backdrop = document.getElementById('bugBackdrop');
+      const closeBtn = document.getElementById('bugModalClose');
+      const cancelBtn= document.getElementById('bugCancelBtn');
+      const toast    = document.getElementById('bugToast');
+      let toastTimer;
+
+      if (!fab || !backdrop) return;
+
+      fab.addEventListener('click', openModal);
+      closeBtn.addEventListener('click', closeModal);
+      cancelBtn.addEventListener('click', closeModal);
+
+      backdrop.addEventListener('click', (e) => {
+        if (e.target === backdrop) closeModal();
+      });
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && backdrop.classList.contains('open')) closeModal();
+      });
+
+      function openModal(){
+        backdrop.classList.add('open');
+        closeBtn.focus();
+      }
+
+      function closeModal(){
+        backdrop.classList.remove('open');
+        fab.focus();
+      }
+
+      ['bugGmailBtn','bugGmailDirectBtn'].forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) {
+          btn.addEventListener('click', () => {
+            closeModal();
+            clearTimeout(toastTimer);
+            toast.classList.add('show');
+            toastTimer = setTimeout(() => toast.classList.remove('show'), 4500);
+          });
+        }
+      });
+    })();
   </script>
 </body>
 

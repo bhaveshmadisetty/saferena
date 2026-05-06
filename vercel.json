@@ -2,6 +2,7 @@
   "version": 2,
   "rewrites": [
     { "source": "/api/status/(.*)", "destination": "/api/status.py" },
+    { "source": "/api/history-encrypted/(.*)", "destination": "/api/history.py" },
     { "source": "/api/history/(.*)", "destination": "/api/history.py" },
     { "source": "/api/(.*)", "destination": "/api/$1" }
   ],

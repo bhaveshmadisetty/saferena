@@ -42,6 +42,8 @@ class handler(BaseHTTPRequestHandler):
             guest_id = payload.get("guestId", "")  # NEW: read guest_id from payload
             personal_api_key = payload.get("personal_api_key", "")
             checkin_context = payload.get("checkinContext", "")
+            encrypted_message = payload.get("encryptedMessage", None)  # E2EE: encrypted user msg blob
+            allow_training = payload.get("allowTraining", False)       # E2EE: opt-in for training data
 
             if not isinstance(messages, list):
                 self._json_response(400, {"error": "'messages' must be an array"})
@@ -152,6 +154,29 @@ class handler(BaseHTTPRequestHandler):
                 except Exception as mem_err:
                     print(f"[memory] Non-fatal save error: {mem_err}")
                 
+                # ---- E2EE: Save encrypted user message blob ----
+                if encrypted_message:
+                    try:
+                        import supabase_memory as mem
+                        import json as _json
+                        enc_content = encrypted_message.get("content", {})
+                        mem.save_encrypted_message(
+                            guest_id,
+                            encrypted_message.get("role", "user"),
+                            _json.dumps(enc_content) if isinstance(enc_content, dict) else str(enc_content)
+                        )
+                    except Exception as enc_err:
+                        print(f"[e2ee] Non-fatal encrypted save error: {enc_err}")
+
+                # ---- E2EE: Save training copy (opt-in ONLY) ----
+                if allow_training and last_user_msg:
+                    try:
+                        import supabase_memory as mem
+                        mem.save_training_copy(guest_id, "user", last_user_msg)
+                        mem.save_training_copy(guest_id, "assistant", reply)
+                    except Exception as train_err:
+                        print(f"[training] Non-fatal training save error: {train_err}")
+
                 # Increment quota ONLY after successful generation
                 if not personal_api_key:
                     try:
