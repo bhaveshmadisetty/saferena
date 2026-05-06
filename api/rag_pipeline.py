@@ -83,6 +83,19 @@ client = OpenAI(
 # In-memory dictionary to track per-session summaries
 session_summaries = {}
 
+def sanitize_reply(reply: str) -> str:
+    """Strip meta-notes, stage directions, and parenthetical leaks from the AI reply."""
+    import re
+    # Remove parenthetical meta-notes: (Note: ...), (note: ...), etc.
+    reply = re.sub(r'\(\s*[Nn]ote[^)]*\)', '', reply)
+    # Remove bracketed meta-notes: [Note: ...], [note: ...]
+    reply = re.sub(r'\[\s*[Nn]ote[^]]*\]', '', reply)
+    # Remove trailing meta-lines that start with Note: or similar
+    reply = re.sub(r'\s*[Nn]ote:\s*.*', '', reply)
+    # Remove any double spaces left behind
+    reply = re.sub(r'\s{2,}', ' ', reply).strip()
+    return reply
+
 # ---------------------------------------------------------------------
 # PIPELINE FUNCTIONS
 # ---------------------------------------------------------------------
@@ -234,7 +247,7 @@ def generate_assistant_reply(
             temperature=CHAT_TEMPERATURE,
             max_tokens=CHAT_MAX_TOKENS
         )
-        reply = response.choices[0].message.content.strip()
+        reply = sanitize_reply(response.choices[0].message.content.strip())
     except Exception as e:
         error_msg = f"API Error: {str(e)}"
         print(error_msg)
@@ -246,6 +259,7 @@ def generate_assistant_reply(
             reply = "There seems to be an issue with the API key authentication. Please double check your OpenRouter key."
         else:
             reply = 'I\'m having a bit of trouble with my connection to the AI right now. (Ref: ' + str(e)[:50] + '...)'
+        reply = sanitize_reply(reply)
 
     # Process and save the summary
     chat_history.append({"user": last_user_query, "assistant": reply})
