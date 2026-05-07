@@ -109,7 +109,7 @@ class handler(BaseHTTPRequestHandler):
                         msg_count = int(ctx.get("session_msg_count", 0))
                         if is_locked or msg_count >= MAX_MESSAGES:
                             return self._json_response(200, {
-                                "reply": "This session has reached its natural close to encourage rest and reflection. Your thoughts will be here if you choose to return in 3 days. Take care of yourself."
+                                "reply": "This session has reached its natural close to encourage rest and reflection. Your thoughts will be here if you choose to return in 24 hours. Take care of yourself."
                             })
                     elif not uc.is_enabled():
                         # Legacy: no user_context table — approximate from recent chat rows only
@@ -119,7 +119,7 @@ class handler(BaseHTTPRequestHandler):
                             user_count = len([m for m in recent if m.get("role") == "user"])
                             if user_count >= MAX_MESSAGES:
                                 return self._json_response(200, {
-                                    "reply": "This session has reached its natural close to encourage rest and reflection. Your thoughts will be here if you choose to return in 3 days. Take care of yourself."
+                                    "reply": "This session has reached its natural close to encourage rest and reflection. Your thoughts will be here if you choose to return in 24 hours. Take care of yourself."
                                 })
                         except Exception:
                             pass

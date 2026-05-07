@@ -178,7 +178,7 @@ Tone preference: {q5}
     if count >= 13:
         context_block += f"\n⚠️ MESSAGE LIMIT: {count}/15 messages used. Naturally bring the session toward a close. Ask if there's anything important to cover before the session ends.\n"
     if count >= 15:
-        context_block += "\n⚠️ FINAL MESSAGE: Give a warm, meaningful closing. Reference what they shared. Tell them you'll remember. Mention they can return in 3 days.\n"
+        context_block += "\n⚠️ FINAL MESSAGE: Give a warm, meaningful closing. Reference what they shared. Tell them you'll remember. Mention they can return in 24 hours.\n"
 
     return base + context_block
 

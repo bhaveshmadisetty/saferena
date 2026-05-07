@@ -198,7 +198,7 @@ def chat():
                 msg_count = ctx.get("session_msg_count", 0)
                 
                 if msg_count >= MAX_MESSAGES:
-                    return jsonify({"reply": "This session has reached its natural close to encourage rest and reflection. Your thoughts will be here if you choose to return in 3 days. Take care of yourself."}), 200
+                    return jsonify({"reply": "This session has reached its natural close to encourage rest and reflection. Your thoughts will be here if you choose to return in 24 hours. Take care of yourself."}), 200
                     
                 # Increment count moved to after successful LLM response to avoid charging for errors
             elif _memory_available:
@@ -206,7 +206,7 @@ def chat():
                 recent = mem.load_recent_messages(guest_id, limit=20)
                 user_count = len([m for m in recent if m.get("role") == "user"])
                 if user_count >= MAX_MESSAGES:
-                    return jsonify({"reply": "This session has reached its natural close to encourage rest and reflection. Your thoughts will be here if you choose to return in 3 days. Take care of yourself."}), 200
+                    return jsonify({"reply": "This session has reached its natural close to encourage rest and reflection. Your thoughts will be here if you choose to return in 24 hours. Take care of yourself."}), 200
         except Exception as e:
             print(f"[chat] Rate limit check error: {e}")
 

@@ -92,7 +92,7 @@ CORE RULES (non-negotiable):
     }
     SESSION_PROGRESS_NEAR = "SESSION PROGRESS: {count}/15 messages. Acknowledge the progress made today and start naturally easing the conversation toward a close. Do not be abrupt."
     SESSION_PROGRESS_VERY_NEAR = "NEAR LIMIT: {count}/15 messages ({remaining} left). Explicitly mention that the session is nearing its end. Ask if there's one last important thing to cover or summarize."
-    SESSION_PROGRESS_FINAL = "FINAL MESSAGE: Warmly close the session. Reference what they shared today. Remind them they can return in 3 days to talk more."
+    SESSION_PROGRESS_FINAL = "FINAL MESSAGE: Warmly close the session. Reference what they shared today. Remind them they can return in 24 hours to talk more."
     HIGH_INTENSITY_RULE = "[HIGH-INTENSITY RULE] If the user is showing signs of extreme panic, spiraling, or very high emotional intensity, GENTLY suggest the breathing exercise in the sidebar (leaf icon). Say: 'I'll be right here while you take a moment for yourself.' and assure them you'll wait."
     CUSTOM_SYSTEM_PROMPTS = {}
 
@@ -179,9 +179,9 @@ def increment_msg_count(guest_id: str):
     
     if new_count >= 15:
         payload["is_locked"] = True
-        # Lock for 3 days
+        # Lock for 24 hours
         from datetime import timedelta
-        payload["unlock_at"] = (datetime.now(timezone.utc) + timedelta(days=3)).isoformat()
+        payload["unlock_at"] = (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
         
     try:
         _get_client().patch(
