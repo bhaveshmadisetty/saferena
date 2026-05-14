@@ -5778,11 +5778,30 @@
         const openingMessage = generateOpeningMessage(path, payload.q1, userName);
 
         const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') && !window.location.port.includes('8080') ? 'http://localhost:8080' : '';
-        fetch(API_BASE + '/api/intake', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        }).catch(() => { });
+
+        // Only call /api/intake if the user doesn't already have a server-side context.
+        // Calling intake unconditionally resets is_locked / session_msg_count / unlock_at,
+        // which would restart the 24h cooldown timer on every page load.
+        let skipIntake = false;
+        try {
+          const existingRes = await fetch(API_BASE + '/api/status/' + encodeURIComponent(guestId));
+          if (existingRes.ok) {
+            const existingData = await existingRes.json();
+            if (existingData.has_context) {
+              // Server already knows this user — skip intake to preserve lock state
+              skipIntake = true;
+            }
+          }
+        } catch (e) {
+          // Server unreachable — fall through to intake call
+        }
+        if (!skipIntake) {
+          fetch(API_BASE + '/api/intake', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          }).catch(() => { });
+        }
 
         // Store in sessionStorage as fallback for immediate use
         sessionStorage.setItem('ob_context', JSON.stringify(payload));

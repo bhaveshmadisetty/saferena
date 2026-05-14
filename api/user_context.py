@@ -112,20 +112,31 @@ def save_intake_v2(guest_id: str, data: dict):
     if not is_enabled() or not guest_id:
         return
 
+    # Check existing context so we don't accidentally reset an active lock
+    existing = get_context(guest_id)
+
     payload = {
         "guest_id": guest_id,
-        "path":            data.get("path", "deep"),      
+        "path":            data.get("path", "deep"),
         "q1_situation":    data.get("q1", ""),
         "q2_duration":     data.get("q2", ""),
         "q3_root_cause":   data.get("q3", ""),
         "q4_daily_impact": "{" + ",".join(data.get("q4", [])) + "}",  # Postgres array format
         "q5_support_need": data.get("q5", ""),
         "first_name":      data.get("first_name", ""),
-        "session_msg_count": 0,
-        "is_locked": False,
         "allow_training":  data.get("allow_training", False),  # E2EE opt-in for model improvement
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
+
+    # If the user is currently locked, preserve the lock state and count.
+    # Re-intake (e.g. re-onboarding) must NOT reset a 24h cooldown.
+    if existing and existing.get("is_locked") and existing.get("unlock_at"):
+        payload["session_msg_count"] = existing.get("session_msg_count", 0)
+        payload["is_locked"] = True
+        payload["unlock_at"] = existing.get("unlock_at")
+    else:
+        payload["session_msg_count"] = 0
+        payload["is_locked"] = False
 
     try:
         # UPSERT behavior in PostgREST requires 'Prefer': 'resolution=merge-duplicates'
