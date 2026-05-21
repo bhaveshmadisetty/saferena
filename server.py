@@ -58,35 +58,41 @@ def api_intake():
 def api_status(guest_id):
     if request.method == "OPTIONS": return "", 204
     import api.user_context as uc
-    ctx = uc.get_context(guest_id)
-    if not ctx: return jsonify({"has_context": False})
-
+    ctx = uc.check_and_apply_auto_unlock(guest_id)
+    
     max_msgs = int(os.getenv("MAX_MESSAGES_PER_SESSION", "15"))
-
-    # Check if the lock period has expired — if so, reset the user
-    if ctx.get("is_locked") and ctx.get("unlock_at"):
-        from datetime import datetime, timezone
-        unlock_at = datetime.fromisoformat(ctx["unlock_at"].replace("Z", "+00:00"))
-        if datetime.now(timezone.utc) > unlock_at:
-            if uc.is_enabled():
-                try:
-                    uc._get_client().patch(
-                        f"{uc._REST_URL}/user_context",
-                        headers=uc._HEADERS,
-                        params={"guest_id": f"eq.{guest_id}"},
-                        json={"is_locked": False, "unlock_at": None, "session_msg_count": 0}
-                    )
-                except Exception: pass
-            # Report full remaining after reset
-            return jsonify({"has_context": True, "rate_limit": {"allowed": True, "remaining": max_msgs, "max_messages": max_msgs}})
+    if not ctx: 
+        return jsonify({
+            "has_context": False,
+            "rate_limit": {
+                "allowed": True,
+                "remaining": max_msgs,
+                "max_messages": max_msgs
+            }
+        })
 
     # Still locked
     if ctx.get("is_locked"):
-        return jsonify({"has_context": True, "rate_limit": {"allowed": False, "remaining": 0, "unlock_at": ctx.get("unlock_at"), "max_messages": max_msgs}})
+        return jsonify({
+            "has_context": True, 
+            "rate_limit": {
+                "allowed": False, 
+                "remaining": 0, 
+                "unlock_at": ctx.get("unlock_at"), 
+                "max_messages": max_msgs
+            }
+        })
 
     # Normal: report actual remaining
     msg_count = ctx.get("session_msg_count", 0)
-    return jsonify({"has_context": True, "rate_limit": {"allowed": True, "remaining": max(0, max_msgs - msg_count), "max_messages": max_msgs}})
+    return jsonify({
+        "has_context": True, 
+        "rate_limit": {
+            "allowed": True, 
+            "remaining": max(0, max_msgs - msg_count), 
+            "max_messages": max_msgs
+        }
+    })
 
 @app.route("/api/opening/<guest_id>", methods=["GET", "OPTIONS"])
 def api_opening(guest_id):
@@ -192,12 +198,12 @@ def chat():
     if guest_id and not personal_api_key:
         try:
             import api.user_context as uc
-            ctx = uc.get_context(guest_id)
+            ctx = uc.check_and_apply_auto_unlock(guest_id)
             if ctx:
                 is_locked = ctx.get("is_locked", False)
                 msg_count = ctx.get("session_msg_count", 0)
                 
-                if msg_count >= MAX_MESSAGES:
+                if is_locked or msg_count >= MAX_MESSAGES:
                     return jsonify({"reply": "This session has reached its natural close to encourage rest and reflection. Your thoughts will be here if you choose to return in 24 hours. Take care of yourself."}), 200
                     
                 # Increment count moved to after successful LLM response to avoid charging for errors

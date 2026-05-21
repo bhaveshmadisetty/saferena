@@ -4245,6 +4245,25 @@
         if (diff <= 0) {
           els.gateCountdown.textContent = 'Ready now';
           stopGateCountdown();
+          
+          STATE.isLocked = false;
+          STATE.unlockTime = null;
+          STATE.msgCount = 0;
+          try {
+            localStorage.removeItem(STORAGE_LOCKED_UNTIL);
+            localStorage.setItem(STORAGE_MSG_COUNT, '0');
+          } catch (e) { }
+
+          els.gateWrap.classList.remove('visible');
+          setTimeout(() => {
+            els.gateWrap.style.display = 'none';
+            restoreComposerLayoutAfterUnlock();
+            autoResizeTextarea();
+            enableInput();
+            updateUsageUI();
+          }, 350);
+
+          syncQuotaFromServer();
           return;
         }
         const h = Math.floor(diff / 3600000);

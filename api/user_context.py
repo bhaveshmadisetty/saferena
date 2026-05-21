@@ -226,6 +226,27 @@ def reset_context(guest_id: str):
         print(f"[user_context] reset_context error: {e}")
 
 
+def check_and_apply_auto_unlock(guest_id: str) -> dict | None:
+    """Fetches context and automatically unlocks the user if the unlock_at timestamp has passed."""
+    ctx = get_context(guest_id)
+    if not ctx:
+        return None
+    if ctx.get("is_locked") and ctx.get("unlock_at"):
+        try:
+            # Normalize ISO string for compatible datetime parsing
+            s = ctx["unlock_at"].replace("Z", "+00:00")
+            if len(s) >= 3 and s[-3] in ('+', '-'):
+                s += ":00"
+            unlock_at = datetime.fromisoformat(s)
+            if datetime.now(timezone.utc) > unlock_at:
+                reset_context(guest_id)
+                # Fetch fresh context after reset
+                ctx = get_context(guest_id)
+        except Exception as e:
+            print(f"[user_context] check_and_apply_auto_unlock parsing/reset error: {e}")
+    return ctx
+
+
 # ---------------------------------------------------------------------------
 # 3. GET OPENING MESSAGE
 # ---------------------------------------------------------------------------

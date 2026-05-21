@@ -29,7 +29,7 @@ class handler(BaseHTTPRequestHandler):
                 return
 
             import user_context as uc
-            ctx = uc.get_context(guest_id)
+            ctx = uc.check_and_apply_auto_unlock(guest_id)
             
             if not ctx:
                 max_msgs = int(os.getenv("MAX_MESSAGES_PER_SESSION", "15"))
@@ -42,18 +42,6 @@ class handler(BaseHTTPRequestHandler):
                     }
                 })
                 return
-            
-            # Auto-unlock logic
-            if ctx.get("is_locked") and ctx.get("unlock_at"):
-                unlock_at = datetime.fromisoformat(ctx["unlock_at"].replace("Z", "+00:00"))
-                if datetime.now(timezone.utc) > unlock_at:
-                    uc.reset_context(guest_id)
-                    max_msgs = int(os.getenv("MAX_MESSAGES_PER_SESSION", "15"))
-                    self._json_response(200, {
-                        "has_context": True, 
-                        "rate_limit": {"allowed": True, "remaining": max_msgs, "max_messages": max_msgs}
-                    })
-                    return
 
             # If still locked
             if ctx.get("is_locked"):

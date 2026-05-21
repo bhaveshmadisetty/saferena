@@ -103,7 +103,7 @@ class handler(BaseHTTPRequestHandler):
             if guest_id and not personal_api_key:
                 try:
                     import user_context as uc
-                    ctx = uc.get_context(guest_id) if uc.is_enabled() else None
+                    ctx = uc.check_and_apply_auto_unlock(guest_id) if uc.is_enabled() else None
                     if ctx:
                         is_locked = bool(ctx.get("is_locked", False))
                         msg_count = int(ctx.get("session_msg_count", 0))

@@ -2461,6 +2461,54 @@ function showGate(opts = {}) {
   els.a11yLive.textContent = "Session complete. You've reached the end of today's messages.";
 }
 
+async function syncQuotaFromServer() {
+  if (STATE.unlimitedMode) return true;
+  try {
+    const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.protocol === 'file:') && !window.location.port.includes('8080') ? 'http://localhost:8080' : '';
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 5000);
+    let statusRes;
+    try {
+      statusRes = await fetch(API_BASE + `/api/status/${encodeURIComponent(getGuestId())}`, { signal: ctrl.signal });
+    } finally {
+      clearTimeout(timer);
+    }
+    if (!statusRes.ok) {
+      return false;
+    }
+    const data = await statusRes.json();
+    if (data && data.rate_limit) {
+      const rl = data.rate_limit;
+      if (rl.max_messages) STATE.MAX_MSGS = rl.max_messages;
+      const rem = Number(rl.remaining);
+      if (Number.isFinite(rem)) {
+        STATE.msgCount = Math.max(0, STATE.MAX_MSGS - rem);
+      } else if (rl.allowed === false) {
+        STATE.msgCount = STATE.MAX_MSGS;
+      } else {
+        STATE.msgCount = 0;
+      }
+      if (rl.unlock_at) {
+        STATE.unlockTime = new Date(rl.unlock_at).getTime();
+        persistLockedUntil();
+      } else {
+        STATE.unlockTime = null;
+        try { localStorage.removeItem(STORAGE_LOCKED_UNTIL); } catch(e){}
+      }
+      persistMsgCount();
+      updateUsageUI();
+      if (!STATE.unlimitedMode && (rl.allowed === false || STATE.msgCount >= STATE.MAX_MSGS)) {
+        showGate({ restored: true });
+      }
+      return true;
+    }
+    return false;
+  } catch (e) {
+    console.warn('syncQuotaFromServer', e);
+    return false;
+  }
+}
+
 /* ─────────────────────────────────────────
    START COUNTDOWN — uses absolute unlock timestamp (persisted)
 ───────────────────────────────────────── */
@@ -2478,6 +2526,25 @@ function startCountdown() {
     if (diff <= 0) {
       els.gateCountdown.textContent = 'Ready now';
       stopGateCountdown();
+
+      STATE.isLocked = false;
+      STATE.unlockTime = null;
+      STATE.msgCount = 0;
+      try {
+        localStorage.removeItem(STORAGE_LOCKED_UNTIL);
+        localStorage.setItem(STORAGE_MSG_COUNT, '0');
+      } catch (e) { }
+
+      els.gateWrap.classList.remove('visible');
+      setTimeout(() => {
+        els.gateWrap.style.display = 'none';
+        restoreComposerLayoutAfterUnlock();
+        autoResizeTextarea();
+        enableInput();
+        updateUsageUI();
+      }, 350);
+
+      syncQuotaFromServer();
       return;
     }
     const h = Math.floor(diff / 3600000);
@@ -2968,19 +3035,7 @@ async function init() {
     };
     
     // 1. Sync Quota
-    const statusRes = await fetchWithTimeout(API_BASE + `/api/status/${guestId}`);
-    if (statusRes.ok) {
-      const data = await statusRes.json();
-      if (data.rate_limit) {
-        STATE.msgCount = data.rate_limit.used || 0;
-        STATE.MAX_MSGS = data.rate_limit.max || 15;
-        persistMsgCount();
-        updateUsageUI();
-        if (!STATE.unlimitedMode && (data.rate_limit.allowed === false || STATE.msgCount >= STATE.MAX_MSGS)) {
-          showGate();
-        }
-      }
-    }
+    await syncQuotaFromServer();
 
     // 2. Sync History
     const historyRes = await fetchWithTimeout(API_BASE + `/api/history/${guestId}`);
