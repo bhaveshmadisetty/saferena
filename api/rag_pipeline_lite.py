@@ -238,6 +238,7 @@ def generate_assistant_reply(
     guest_id: str = "",        # User context mapping
     personal_api_key: str = "",
     checkin_context: str = "",
+    crisis_level: str = "none",  # Deterministic safety signal from api/crisis.py
 ) -> dict[str, str]:
     if not messages:
         return {"reply": "I am here with you.", "summary": ""}
@@ -280,8 +281,26 @@ def generate_assistant_reply(
     last_3_assistant = [turn["assistant"] for turn in chat_history[-3:] if "assistant" in turn]
     last_3_replies = "\n".join(last_3_assistant) if last_3_assistant else "None yet."
 
-    from api.user_context import build_system_prompt_v2
+    # Same import fallback as prompt_config above: the serverless handlers put
+    # api/ itself on sys.path and there is no api/__init__.py, so "api.user_context"
+    # raises ModuleNotFoundError there.
+    try:
+        from .user_context import build_system_prompt_v2
+    except ImportError:
+        from user_context import build_system_prompt_v2
     base_prompt = build_system_prompt_v2(guest_id)
+
+    # Append the deterministic safety annotation so the model adapts its tone.
+    # "high" is already intercepted in api/chat.py and never reaches here.
+    if crisis_level and crisis_level != "none":
+        try:
+            try:
+                from .crisis import prompt_annotation
+            except ImportError:
+                from crisis import prompt_annotation
+            base_prompt += prompt_annotation(crisis_level)
+        except Exception as e:
+            print(f"[lite] crisis annotation unavailable: {e}")
 
     checkin_block = checkin_context.strip() if isinstance(checkin_context, str) else ""
 
@@ -318,13 +337,25 @@ def generate_assistant_reply(
         print(error_msg)
 
         # Surface the actual error to the user if it's a known issue
-        if "402" in str(e):
-            reply = "I'm sorry, I'm hitting a credit limit on the current AI model. We might need to try a different free model or check the API key settings."
-        elif "401" in str(e):
-            reply = "There seems to be an issue with the API key authentication. Please double check your OpenRouter key."
+        # Keep user-facing copy human. Only mention the key when the user
+        # supplied one; otherwise don't expose provider internals in chat.
+        if "401" in str(e) and personal_api_key:
+            reply = "That API key didn't authenticate. Could you double-check it? You can also remove it and continue on the shared limit."
         else:
-            reply = 'I\'m having a bit of trouble with my connection to the AI right now. (Ref: ' + str(e)[:50] + '...)'
+            reply = "I'm having trouble reaching my words right now — that's on my end, not yours. Could you give it another moment and try again?"
         reply = sanitize_reply(reply)
+
+        # Safety net: if the model failed on a distressing message, make sure
+        # helplines still reach the user rather than a bare error.
+        if crisis_level and crisis_level != "none":
+            try:
+                try:
+                    from .crisis import HELPLINE_BLOCK
+                except ImportError:
+                    from crisis import HELPLINE_BLOCK
+                reply += "\n\nAnd while I sort myself out — if things feel heavy right now, please reach out:\n\n" + HELPLINE_BLOCK
+            except Exception:
+                pass
 
 
     # Process and save the summary

@@ -215,7 +215,12 @@ def generate_assistant_reply(
     last_3_assistant = [turn["assistant"] for turn in chat_history[-3:] if "assistant" in turn]
     last_3_replies = "\n".join(last_3_assistant) if last_3_assistant else "None yet."
 
-    from api.user_context import build_system_prompt_v2
+    # api/ is placed on sys.path by the handlers and has no __init__.py,
+    # so fall back to a flat import when the package form is unavailable.
+    try:
+        from .user_context import build_system_prompt_v2
+    except ImportError:
+        from user_context import build_system_prompt_v2
     base_prompt = build_system_prompt_v2(guest_id)
 
     checkin_block = checkin_context.strip() if isinstance(checkin_context, str) else ""

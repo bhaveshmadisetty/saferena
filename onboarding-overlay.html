@@ -820,6 +820,19 @@
 <script>
 (function() {
   // ─── helpers ───────────────────────────────
+  // Falls back to a local implementation when this block runs standalone
+  // (the host page defines its own escapeHTML when injected).
+  const escapeHTML = (typeof window !== 'undefined' && window.escapeHTML)
+    ? window.escapeHTML
+    : function (str) {
+        return String(str == null ? '' : str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      };
+
   function getGuestId() {
     let id = document.cookie.split('; ').find(r => r.startsWith('guest_id='))?.split('=')[1];
     if (!id) {
@@ -993,8 +1006,8 @@
 
       const isSkipped = item.val === 'Not sure yet — will explore in the session.';
       row.innerHTML = `
-        <span class="ob-s-label">${item.label}</span>
-        <span class="ob-s-val">${isSkipped ? '<em>Not sure yet</em>' : displayVal}</span>
+        <span class="ob-s-label">${escapeHTML(item.label)}</span>
+        <span class="ob-s-val">${isSkipped ? '<em>Not sure yet</em>' : escapeHTML(displayVal)}</span>
       `;
       rows.appendChild(row);
     });

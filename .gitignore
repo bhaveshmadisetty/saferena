@@ -5,6 +5,9 @@ __pycache__/
 # Local environment files
 .env
 .env.*
+# ...but the template (placeholders only) must be committed so deployers
+# know which variables to set.
+!.env.example
 
 # OS/editor artifacts
 .DS_Store
@@ -23,3 +26,8 @@ index_backup.html
 index_merged.html
 temp*.js
 scripts/check_db2_out.txt
+
+# Local backups (contain historical secrets)
+backups/
+.env.bak_predit
+bug-report-widget.local.html

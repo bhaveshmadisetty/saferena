@@ -3,7 +3,7 @@ from openai import OpenAI
 import sys
 
 # Using the EXACT key and logic from rag_pipeline.py
-API_KEY = "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"
+API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
 client = OpenAI(
     api_key=API_KEY,
     base_url="https://openrouter.ai/api/v1"

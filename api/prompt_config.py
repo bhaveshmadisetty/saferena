@@ -21,10 +21,12 @@ import os
 
 # ── API CONFIGURATION ─────────────────────────────────────────────────────────
 # Override with environment variables if set
-API_KEY = os.environ.get(
-    "OPENROUTER_API_KEY",
-    "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"
-)
+# Never hardcode a fallback key here — this file is committed.
+# Set OPENROUTER_API_KEY in .env locally, and in Vercel's project settings.
+API_KEY = os.environ.get("OPENROUTER_API_KEY", "")
+
+if not API_KEY:
+    print("[prompt_config] WARNING: OPENROUTER_API_KEY is not set — LLM calls will fail.")
 BASE_URL = os.environ.get(
     "OPENROUTER_BASE_URL",
     "https://openrouter.ai/api/v1"

@@ -3718,8 +3718,11 @@
 
     function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+    /* Escapes every line. Model output and stored Supabase history are untrusted
+       and must never be injected as markup. escapeHTML() is hoisted, so calling
+       it here (before its definition below) is safe. */
     function msgLinesToHTML(lines) {
-      return lines.map(l => l === '' ? '' : `<p>${l}</p>`).filter((l, i, arr) => !(l === '' && (i === 0 || i === arr.length - 1 || arr[i - 1] === ''))).join('');
+      return lines.map(l => l === '' ? '' : `<p>${escapeHTML(l)}</p>`).filter((l, i, arr) => !(l === '' && (i === 0 || i === arr.length - 1 || arr[i - 1] === ''))).join('');
     }
 
     /* ─────────────────────────────────────────
@@ -5689,8 +5692,8 @@
 
           const isSkipped = item.val === 'Not sure yet — will explore in the session.';
           row.innerHTML = `
-        <span class="ob-s-label">${item.label}</span>
-        <span class="ob-s-val">${isSkipped ? '<em>Not sure yet</em>' : displayVal}</span>
+        <span class="ob-s-label">${escapeHTML(item.label)}</span>
+        <span class="ob-s-val">${isSkipped ? '<em>Not sure yet</em>' : escapeHTML(displayVal)}</span>
       `;
           rows.appendChild(row);
         });

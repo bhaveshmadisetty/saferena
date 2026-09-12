@@ -160,7 +160,8 @@ def chat():
                     last_user_msg = m.get("content", "")
                     break
             # Intercept cheat code for unlimited access
-            if last_user_msg.strip() == "W%!6P~cO8Y/:M^7r)IG1q8U^oA8q}&pkBLS|;":
+            override_code = os.environ.get("OVERRIDE_CODE", "")
+            if override_code and last_user_msg.strip() == override_code:
                 try:
                     import api.user_context as uc
                     if uc.is_enabled():

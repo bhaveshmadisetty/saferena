@@ -1987,8 +1987,10 @@ function fmtTime(d = new Date()) {
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+/* Escapes every line — model output and stored history are untrusted and must
+   never be injected as markup. escapeHTML() is hoisted, so this is safe. */
 function msgLinesToHTML(lines) {
-  return lines.map(l => l === '' ? '' : `<p>${l}</p>`).filter((l, i, arr) => !(l === '' && (i === 0 || i === arr.length - 1 || arr[i-1] === ''))).join('');
+  return lines.map(l => l === '' ? '' : `<p>${escapeHTML(l)}</p>`).filter((l, i, arr) => !(l === '' && (i === 0 || i === arr.length - 1 || arr[i-1] === ''))).join('');
 }
 
 /* ─────────────────────────────────────────
