@@ -69,3 +69,22 @@ Open:
 
 - `http://127.0.0.1:8765/chatindex.html` (full Saferena experience)
 - `http://127.0.0.1:8765/index.html` (legacy module UI)
+
+## Documentation
+
+| Document | What it covers |
+|---|---|
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System context, `/api/chat` request lifecycle, safety layers, data model, retrieval, configuration |
+| [docs/API.md](docs/API.md) | Every endpoint with request/response shapes and status codes |
+| [docs/crisis_evaluation.md](docs/crisis_evaluation.md) | Precision / recall of the crisis classifier on a 101-message labelled set |
+| [docs/retrieval_benchmark.md](docs/retrieval_benchmark.md) | Production TF-IDF vs dense embeddings (MiniLM) on lexical, paraphrase and Hinglish queries |
+| [PROJECT_FLOW_CHART.md](PROJECT_FLOW_CHART.md) | Step-by-step RAG walkthrough for AI/ML students |
+
+## Tests and evaluation
+
+```bash
+pip install -r requirements-dev.txt
+py -m pytest tests/ -q                       # crisis classifier: zero missed high-risk cases is a hard assertion
+py tests/test_crisis_eval.py --report        # regenerate docs/crisis_evaluation.md
+py scripts/benchmark_retrieval.py --report   # regenerate docs/retrieval_benchmark.md
+```

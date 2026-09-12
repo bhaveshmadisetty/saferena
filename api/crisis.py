@@ -32,31 +32,55 @@ HELPLINE_BLOCK = (
 # High confidence: explicit intent or planning. These trigger the crisis
 # response immediately, replacing the model's reply.
 _HIGH_RISK = [
+    # --- explicit intent ---------------------------------------------------
     r"\bkill(ing)?\s+my\s?self\b",
+    r"\bkill(ing)?\s+(him|her|them)\s?sel(f|ves)\b",      # third party; negation downgrades
     r"\bkms\b",
     r"\bend(ing)?\s+(my|this)\s+life\b",
+    r"\bend\s+it\s+all\b",
     r"\btake\s+my\s+(own\s+)?life\b",
     r"\bcommit\s+suicide\b",
     r"\bsuicide\b",
     r"\bsuicidal\b",
-    r"\bwant(s|ed)?\s+to\s+die\b",
+    # --- passive ideation --------------------------------------------------
+    # "die of embarrassment / laughing" is everyday speech, not ideation.
+    r"\bwant(s|ed)?\s+to\s+die\b(?!\s+(of|from)\s+(embarrassment|shame|cringe|laugh|boredom))",
     r"\bwanna\s+die\b",
     r"\bbetter\s+off\s+dead\b",
-    r"\bdon'?t\s+want\s+to\s+(be\s+here|exist|live|wake\s+up)\b",
-    r"\bdo\s?n'?t\s+want\s+to\s+live\b",
+    r"\b(better|happier)\s+(off\s+)?(without\s+me|if\s+i\s+(was|were|wasn'?t)\s+(dead|gone|here|around))\b",
+    r"\brather\s+be\s+dead\b",
+    r"\bdon'?t\s+want\s+to\s+(exist|wake\s+up)\b",
+    r"\bdon'?t\s+want\s+to\s+be\s+here\b(?!\s+(at|in|for)\b)",
+    # "don't want to live IN this hostel / WITH my parents" is about a place, not life.
+    r"\b(do\s+not|don'?t|dont)\s+want\s+to\s+(live|be\s+alive)\b(?!\s+(in|with|at|here|there|like|near|on|under|through|by)\b)",
     r"\bno\s+(reason|point)\s+(to|in)\s+liv",
     r"\bnothing\s+to\s+live\s+for\b",
-    r"\bcut(ting)?\s+my\s?self\b",
-    r"\bhurt(ing)?\s+my\s?self\b",
+    r"\b(not|isn'?t|is\s+not|ain'?t)\s+worth\s+living\b",
+    r"\bwant\s+(it\s+all|everything)\s+to\s+(end|stop|be\s+over)\b",
+    r"\btired\s+of\s+(living|life|being\s+alive)\b",
+    # --- self-harm ---------------------------------------------------------
+    # "cut myself WHILE chopping", "hurt myself AT the gym" are accidents.
+    r"\bcut(ting)?\s+my\s?self\b(?!\s+(while|on|with)\b)",
+    r"\bhurt(ing)?\s+my\s?self\b(?!\s+(at|in|during|while|playing|on)\b)",
     r"\bharm(ing)?\s+my\s?self\b",
-    r"\bself[\s-]?harm\b",
-    r"\boverdos(e|ing)\b",
+    r"\bself[\s-]?harm",
+    r"\boverdos(e|ed|ing)\b(?!\s+(on|of)\s+(caffeine|coffee|sugar|chai|tea|netflix|memes|reels))",
+    r"\b(took|swallowed|taking|take)\s+(a\s+)?(bunch|handful|lot|bottle|load)\s+of\s+(pills|tablets|sleeping)",
     r"\bhang\s+my\s?self\b",
     r"\bjump\s+off\b",
     r"\bslit\s+my\s+wrist",
+    # --- planning / farewell ------------------------------------------------
     r"\bwrote\s+a\s+(suicide\s+)?note\b",
     r"\bgoodbye\s+forever\b",
     r"\bthis\s+is\s+my\s+last\b",
+    # --- Hinglish (romanised Hindi) ----------------------------------------
+    r"\bmarna\s+(hai|chahta|chahti|chahte)\b",
+    r"\bmar\s+ja(a)?n[ae]\s+(chahta|chahti|chahte|hai|ka\s+man)",
+    r"\bmar\s+ja(a)?u(n|ngi|nga)?\b",
+    r"\bkhud\s+ko\s+(khatam|khatm|maar|marna)",
+    r"\bjeena\s+nahi\s+(hai|chahta|chahti)",
+    r"\bzindagi\s+khatam\b",
+    r"\bjaan\s+de\s+d",
 ]
 
 # Lower confidence: distress worth flagging to the model so it responds with
@@ -66,23 +90,31 @@ _ELEVATED_RISK = [
     r"\bworthless\b",
     r"\bcan'?t\s+(go\s+on|do\s+this\s+an?y?more|take\s+it\s+an?y?more)\b",
     r"\bgive\s+up\s+on\s+everything\b",
-    r"\bdisappear\b",
-    r"\bnobody\s+would\s+(care|notice|miss)\b",
-    r"\bburden\s+to\s+everyone\b",
-    r"\bnumb\b",
+    # "disappear FOR a weekend" is a holiday, not withdrawal.
+    r"\b(want|wanna|wish)\s+to\s+(just\s+)?disappear\b(?!\s+(for|to|on|from)\b)",
+    r"\b(nobody|no\s+one)\s+would\s+(care|notice|miss)\b",
+    r"\b(nobody|no\s+one)\s+(cares|understands)\b",
+    r"\bburden\s+(to|on)\s+everyone\b",
+    r"\ba\s+burden\b",
+    # bare "numb" also matches "hands are numb from the cold"; require an emotional frame.
+    r"\b(feel(s|ing)?|felt|so|completely|totally|emotionally)\s+numb\b",
     r"\bempty\s+inside\b",
+    r"\btired\s+of\s+everything\b",
+    r"\bwhat'?s\s+the\s+point\b",
+    r"\bhate\s+my\s?self\b",
 ]
 
 _HIGH_RE = [re.compile(p, re.IGNORECASE) for p in _HIGH_RISK]
 _ELEVATED_RE = [re.compile(p, re.IGNORECASE) for p in _ELEVATED_RISK]
 
 # Phrases that indicate the user is describing something other than their own
-# present intent (past tense, third party, hypothetical, media).
+# present intent (past tense, third party, hypothetical, media, academic).
 _NEGATION_RE = [
     re.compile(p, re.IGNORECASE) for p in [
-        r"\b(my|a|his|her|their)\s+(friend|brother|sister|cousin|mom|mother|dad|father|colleague|classmate)\b",
+        r"\b(my|a|his|her|their)\s+(friend|brother|sister|cousin|mom|mother|dad|father|colleague|classmate|roommate)\b",
         r"\bused\s+to\s+(feel|think|want)\b",
-        r"\b(movie|film|show|series|book|song|character|news|article)\b",
+        r"\b(movie|film|show|series|book|song|character|news|article|documentary|podcast)\b",
+        r"\b(awareness|prevention|campaign|helpline|hotline|research|assignment|essay|project|presentation|seminar|lecture)\b",
         r"\bnot\s+suicidal\b",
         r"\bi'?m\s+not\s+going\s+to\b",
         r"\bwould\s+never\b",

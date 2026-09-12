@@ -1,0 +1,5 @@
+# Development and evaluation only. NOT installed on Vercel.
+-r requirements.txt
+pytest
+# Dense-embedding baseline for scripts/benchmark_retrieval.py (~90 MB model download on first run)
+sentence-transformers
