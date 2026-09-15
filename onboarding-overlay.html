@@ -581,6 +581,7 @@
           </div>
         </button>
       </div>
+      <div class="ob-skip-row" style="text-align:right;margin:-0.35rem 0 0.6rem"><button class="ob-skip-btn" type="button" onclick="skipStep('d1')">Not sure yet →</button></div>
       <div class="ob-btn-row">
         <button class="ob-btn-back" onclick="goTo('ob-s0', null, null)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg> Back
@@ -605,6 +606,7 @@
         <button class="ob-pill" data-q="d2" data-val="this has been part of my life for over a year">Over a year</button>
         <button class="ob-pill" data-q="d2" data-val="honestly, it feels like forever — I can't remember feeling different">Feels like forever</button>
       </div>
+      <div class="ob-skip-row" style="text-align:right;margin:-0.35rem 0 0.6rem"><button class="ob-skip-btn" type="button" onclick="skipStep('d2')">Not sure yet →</button></div>
       <div class="ob-btn-row">
         <button class="ob-btn-back" onclick="goTo('ob-d1', null, 'd1')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg> Back
@@ -673,6 +675,7 @@
           </div>
         </button>
       </div>
+      <div class="ob-skip-row" style="text-align:right;margin:-0.35rem 0 0.6rem"><button class="ob-skip-btn" type="button" onclick="skipStep('d4')">Not sure yet →</button></div>
       <div class="ob-btn-row">
         <button class="ob-btn-back" onclick="goTo('ob-d3', null, 'd3')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg> Back
@@ -727,6 +730,7 @@
           </div>
         </button>
       </div>
+      <div class="ob-skip-row" style="text-align:right;margin:-0.35rem 0 0.6rem"><button class="ob-skip-btn" type="button" onclick="skipStep('g1')">Not sure yet →</button></div>
       <div class="ob-btn-row">
         <button class="ob-btn-back" onclick="goTo('ob-s0', null, null)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg> Back
@@ -751,6 +755,7 @@
         <button class="ob-pill" data-q="g2" data-val="low energy, a bit down today">😔 A bit down</button>
         <button class="ob-pill" data-q="g2" data-val="honestly not sure — hard to describe">🤷 Hard to say</button>
       </div>
+      <div class="ob-skip-row" style="text-align:right;margin:-0.35rem 0 0.6rem"><button class="ob-skip-btn" type="button" onclick="skipStep('g2')">Not sure yet →</button></div>
       <div class="ob-btn-row">
         <button class="ob-btn-back" onclick="goTo('ob-g1', null, 'g1')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg> Back
@@ -774,6 +779,7 @@
         <button class="ob-pill" data-q="g3" data-val="be casual and light — like talking to a friend">😄 Casual, like a friend</button>
         <button class="ob-pill" data-q="g3" data-val="be honest and direct — don't sugarcoat">🎯 Honest and direct</button>
       </div>
+      <div class="ob-skip-row" style="text-align:right;margin:-0.35rem 0 0.6rem"><button class="ob-skip-btn" type="button" onclick="skipStep('g3')">Not sure yet →</button></div>
       <div class="ob-btn-row">
         <button class="ob-btn-back" onclick="goTo('ob-g2', null, 'g2')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg> Back
@@ -925,6 +931,19 @@
   });
 
   // ─── D3 (free text) ────────────────────────
+  // ─── generic skip for every step (tester feedback: "the questions felt written for breakups") ───
+  window.skipStep = function (q) {
+    const route = {
+      d1: ['ob-d2', 'd2'], d2: ['ob-d3', 'd3'], d4: ['summary', 'deep'],
+      g1: ['ob-g2', 'g2'], g2: ['ob-g3', 'g3'], g3: ['summary', 'general']
+    };
+    if (!route[q]) return;
+    answers[q] = "Not sure yet — will explore in the session.";
+    document.querySelectorAll(`[data-q="${q}"]`).forEach(b => b.classList.remove('ob-sel'));
+    const [target, arg] = route[q];
+    if (target === 'summary') showSummary(arg); else goTo(target, q, arg);
+  };
+
   window.skipD3 = function() {
     answers['d3'] = "Not sure yet — will explore in the session.";
     goTo('ob-d4', 'd3', 'd4');

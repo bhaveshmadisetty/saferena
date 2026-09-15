@@ -812,6 +812,20 @@
       color: var(--text);
     }
 
+    .gate-unlock {
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: .01em;
+      margin: -2px 0 10px;
+      min-height: 1em;
+    }
+
+    .gate-why {
+      font-size: 12.5px;
+      opacity: .85;
+      max-width: 38ch;
+    }
+
     .gate-sub {
       font-size: 13px;
       color: var(--muted);
@@ -3038,7 +3052,7 @@
               </svg>
             </button>
           </div>
-          <p class="composer-hint" aria-hidden="true">No judgment. Just space.</p>
+          <p class="composer-hint">No judgment. Just space. Anonymous, encrypted on your device, never tied to an identity.</p>
         </div>
       </div>
 
@@ -3058,6 +3072,9 @@
         <p class="gate-sub">You've reached the end of today's session. Your conversation and this space will be waiting
           for you.</p>
         <div class="gate-countdown" id="gateCountdown" aria-live="polite">—</div>
+        <div class="gate-unlock" id="gateUnlockAt" aria-live="polite"></div>
+        <p class="gate-sub gate-why">Fifteen messages is enough for one night. The pause is deliberate: it keeps this a
+          place you come back to, not one you can't leave. Rest. Your words will still be here.</p>
 
         <!-- API KEY QUICK UNLOCK -->
         <div class="gate-divider">or continue with your own API key</div>
@@ -4239,6 +4256,15 @@
       }
       persistClientQuota();
 
+      // Tester feedback: show the exact unlock time, not just a countdown.
+      const unlockEl = document.getElementById('gateUnlockAt');
+      if (unlockEl && STATE.unlockTime) {
+        const d = new Date(STATE.unlockTime);
+        const t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+        const day = new Date().toDateString() === d.toDateString() ? 'today' : 'tomorrow';
+        unlockEl.textContent = `Unlocks ${day} at ${t}`;
+      }
+
       function tick() {
         if (!STATE.isLocked || STATE.hasPersonalKey) {
           stopGateCountdown();
@@ -4247,6 +4273,7 @@
         const diff = STATE.unlockTime - Date.now();
         if (diff <= 0) {
           els.gateCountdown.textContent = 'Ready now';
+          const _u = document.getElementById('gateUnlockAt'); if (_u) _u.textContent = '';
           stopGateCountdown();
           
           STATE.isLocked = false;
@@ -5197,6 +5224,7 @@
             </div>
           </button>
         </div>
+        <div class="ob-skip-row" style="text-align:right;margin:-0.35rem 0 0.6rem"><button class="ob-skip-btn" type="button" onclick="skipStep('d1')">Not sure yet →</button></div>
         <div class="ob-btn-row">
           <button class="ob-btn-back" onclick="goTo('ob-s0', null, null)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -5229,6 +5257,7 @@
           <button class="ob-pill" data-q="d2"
             data-val="honestly, it feels like forever — I can't remember feeling different">Feels like forever</button>
         </div>
+        <div class="ob-skip-row" style="text-align:right;margin:-0.35rem 0 0.6rem"><button class="ob-skip-btn" type="button" onclick="skipStep('d2')">Not sure yet →</button></div>
         <div class="ob-btn-row">
           <button class="ob-btn-back" onclick="goTo('ob-d1', null, 'd1')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -5308,6 +5337,7 @@
             </div>
           </button>
         </div>
+        <div class="ob-skip-row" style="text-align:right;margin:-0.35rem 0 0.6rem"><button class="ob-skip-btn" type="button" onclick="skipStep('d4')">Not sure yet →</button></div>
         <div class="ob-btn-row">
           <button class="ob-btn-back" onclick="goTo('ob-d3', null, 'd3')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -5370,6 +5400,7 @@
             </div>
           </button>
         </div>
+        <div class="ob-skip-row" style="text-align:right;margin:-0.35rem 0 0.6rem"><button class="ob-skip-btn" type="button" onclick="skipStep('g1')">Not sure yet →</button></div>
         <div class="ob-btn-row">
           <button class="ob-btn-back" onclick="goTo('ob-s0', null, null)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -5400,6 +5431,7 @@
           <button class="ob-pill" data-q="g2" data-val="low energy, a bit down today">😔 A bit down</button>
           <button class="ob-pill" data-q="g2" data-val="honestly not sure — hard to describe">🤷 Hard to say</button>
         </div>
+        <div class="ob-skip-row" style="text-align:right;margin:-0.35rem 0 0.6rem"><button class="ob-skip-btn" type="button" onclick="skipStep('g2')">Not sure yet →</button></div>
         <div class="ob-btn-row">
           <button class="ob-btn-back" onclick="goTo('ob-g1', null, 'g1')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -5431,6 +5463,7 @@
           <button class="ob-pill" data-q="g3" data-val="be honest and direct — don't sugarcoat">🎯 Honest and
             direct</button>
         </div>
+        <div class="ob-skip-row" style="text-align:right;margin:-0.35rem 0 0.6rem"><button class="ob-skip-btn" type="button" onclick="skipStep('g3')">Not sure yet →</button></div>
         <div class="ob-btn-row">
           <button class="ob-btn-back" onclick="goTo('ob-g2', null, 'g2')">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -5609,6 +5642,19 @@
           if (nextMap[q]) document.getElementById(nextMap[q]).disabled = false;
         });
       });
+
+      // ─── generic skip for every step (tester feedback: "the questions felt written for breakups") ───
+      window.skipStep = function (q) {
+        const route = {
+          d1: ['ob-d2', 'd2'], d2: ['ob-d3', 'd3'], d4: ['summary', 'deep'],
+          g1: ['ob-g2', 'g2'], g2: ['ob-g3', 'g3'], g3: ['summary', 'general']
+        };
+        if (!route[q]) return;
+        answers[q] = "Not sure yet — will explore in the session.";
+        document.querySelectorAll(`[data-q="${q}"]`).forEach(b => b.classList.remove('ob-sel'));
+        const [target, arg] = route[q];
+        if (target === 'summary') showSummary(arg); else goTo(target, q, arg);
+      };
 
       // ─── D3 (free text) ────────────────────────
       window.skipD3 = function () {
